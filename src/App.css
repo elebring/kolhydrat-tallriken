@@ -119,6 +119,32 @@ section {
   background: #ffffff;
 }
 
+.option-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+}
+
+.sub-card {
+  background: #f9fbfa;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 14px;
+}
+
+.summary-card {
+  background: var(--primary-light);
+  border: 1px solid rgba(47, 111, 115, 0.2);
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 14px;
+}
+
+.summary-card p {
+  margin-bottom: 0;
+  font-size: 17px;
+}
+
 label {
   font-weight: 700;
   display: block;

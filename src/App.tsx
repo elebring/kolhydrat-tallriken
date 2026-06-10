@@ -491,7 +491,7 @@ export default function App() {
               <section>
                 <h2>Beräkning av rester</h2>
 
-                <div className="card">
+                <div className="card option-card">
                   <h3>Alternativ 1: total vikt kvar</h3>
 
                   <label>Total vikt kvar på tallriken, gram</label>
@@ -512,65 +512,72 @@ export default function App() {
                   </p>
                 </div>
 
-                <h3>Alternativ 2: vikt kvar per komponent</h3>
+                <div className="card option-card">
+                  <h3>Alternativ 2: vikt kvar per komponent</h3>
 
-                {selectedMeal.components.map(component => {
-                  const carbsPer100g =
-                    component.manualCarbsPer100g ?? component.carbsPer100g;
+                  {selectedMeal.components.map(component => {
+                    const carbsPer100g =
+                      component.manualCarbsPer100g ?? component.carbsPer100g;
 
-                  const leftover = Number(leftovers[component.id] ?? 0);
-                  const eaten = eatenCarbs(
-                    component.plannedGrams,
-                    leftover,
-                    carbsPer100g
-                  );
+                    const leftover = Number(leftovers[component.id] ?? 0);
+                    const eaten = eatenCarbs(
+                      component.plannedGrams,
+                      leftover,
+                      carbsPer100g
+                    );
 
-                  return (
-                    <div className="card" key={component.id}>
-                      <strong>{component.query}</strong>
+                    return (
+                      <div className="sub-card" key={component.id}>
+                        <strong>{component.query}</strong>
 
-                      <p>
-                        Planerad portion: {component.plannedGrams} g
-                        <br />
-                        Kolhydrater: {carbsPer100g} g / 100 g
-                      </p>
+                        <p>
+                          Planerad portion: {component.plannedGrams} g
+                          <br />
+                          Kolhydrater: {carbsPer100g} g / 100 g
+                        </p>
 
-                      <label>Kvar på tallriken, gram</label>
-                      <input
-                        type="number"
-                        value={leftovers[component.id] ?? ""}
-                        onChange={e =>
-                          setLeftovers(current => ({
-                            ...current,
-                            [component.id]: e.target.value,
-                          }))
-                        }
-                      />
+                        <label>Kvar på tallriken, gram</label>
+                        <input
+                          type="number"
+                          value={leftovers[component.id] ?? ""}
+                          onChange={e =>
+                            setLeftovers(current => ({
+                              ...current,
+                              [component.id]: e.target.value,
+                            }))
+                          }
+                        />
 
-                      <p>
-                        Uppskattat ätit: <strong>{eaten} g kolhydrater</strong>
-                      </p>
-                    </div>
-                  );
-                })}
+                        <p>
+                          Uppskattat ätit: <strong>{eaten} g kolhydrater</strong>
+                        </p>
+                      </div>
+                    );
+                  })}
 
-                <h2>
-                  Totalt ätit enligt komponenter:{" "}
-                  {selectedMeal.components
-                    .reduce((sum: number, component: MealComponent) => {
-                      const carbsPer100g =
-                        component.manualCarbsPer100g ?? component.carbsPer100g;
+                  <div className="summary-card">
+                    <strong>Sammanfattning</strong>
+                    <p>
+                      Totalt ätit enligt komponenter:{" "}
+                      <strong>
+                        {selectedMeal.components
+                          .reduce((sum: number, component: MealComponent) => {
+                            const carbsPer100g =
+                              component.manualCarbsPer100g ?? component.carbsPer100g;
 
-                      const leftover = Number(leftovers[component.id] ?? 0);
+                            const leftover = Number(leftovers[component.id] ?? 0);
 
-                      return (
-                        sum +
-                        eatenCarbs(component.plannedGrams, leftover, carbsPer100g)
-                      );
-                    }, 0)
-                    .toFixed(1)}{" "}
-                  g kolhydrater
-                </h2>
+                            return (
+                              sum +
+                              eatenCarbs(component.plannedGrams, leftover, carbsPer100g)
+                            );
+                          }, 0)
+                          .toFixed(1)}{" "}
+                        g kolhydrater
+                      </strong>
+                    </p>
+                  </div>
+                </div>
               </section>
             </>
           )}
