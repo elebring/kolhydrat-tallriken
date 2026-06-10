@@ -7,7 +7,9 @@ export async function fetchFoods(offset = 0, limit = 100): Promise<Food[]> {
     `${BASE_URL}/livsmedel?offset=${offset}&limit=${limit}&sprak=1`
   );
 
-  if (!res.ok) throw new Error("Kunde inte hämta livsmedel");
+  if (!res.ok) {
+    throw new Error("Kunde inte hämta livsmedel");
+  }
 
   const data = await res.json();
   return data.livsmedel ?? data.items ?? data;
@@ -20,7 +22,7 @@ export async function fetchAllFoods(): Promise<Food[]> {
 
   while (true) {
     const batch = await fetchFoods(offset, limit);
-    if (!batch.length) break;
+    if (!Array.isArray(batch) || batch.length === 0) break;
 
     all = [...all, ...batch];
     offset += limit;
@@ -31,12 +33,17 @@ export async function fetchAllFoods(): Promise<Food[]> {
   return all;
 }
 
-export async function fetchNutrition(foodNumber: number): Promise<NutritionValue[]> {
+export async function fetchNutrition(
+  foodNumber: number
+): Promise<NutritionValue[]> {
   const res = await fetch(
     `${BASE_URL}/livsmedel/${foodNumber}/naringsvarden?sprak=1`
   );
 
-  if (!res.ok) throw new Error("Kunde inte hämta näringsvärden");
+  if (!res.ok) {
+    throw new Error("Kunde inte hämta näringsvärden");
+  }
 
-  return res.json();
+  const data = await res.json();
+  return data.naringsvarden ?? data.items ?? data;
 }
