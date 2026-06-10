@@ -26,6 +26,7 @@ export type MealComponent = {
   carbsPer100g: number;
   manualCarbsPer100g?: number;
   plannedGrams: number;
+  plannedGramsInput?: string;
 };
 
 export type DayMeal = {
