@@ -1,0 +1,69 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f4f4f4;
+  color: #222;
+}
+
+main {
+  max-width: 760px;
+  margin: auto;
+  padding: 20px;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+button,
+input,
+select {
+  width: 100%;
+  padding: 12px;
+  margin: 6px 0 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+}
+
+button {
+  background: #ffffff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button.active {
+  background: #222;
+  color: white;
+}
+
+section,
+.card,
+.result {
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.card {
+  border: 1px solid #ddd;
+}
+
+.result {
+  border-left: 6px solid #222;
+}
+
+label {
+  font-weight: 600;
+  display: block;
+  margin-top: 10px;
+}
+
+.danger {
+  background: #ffe8e8;
+  border-color: #ffb3b3;
+}
