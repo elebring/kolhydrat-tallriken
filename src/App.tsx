@@ -72,7 +72,12 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(
       DRAFT_KEY,
-      JSON.stringify({ weekday, menuText, targetCarbs, components })
+      JSON.stringify({
+        weekday,
+        menuText,
+        targetCarbs,
+        components,
+      })
     );
   }, [weekday, menuText, targetCarbs, components]);
 
@@ -89,7 +94,9 @@ export default function App() {
         return {
           ...component,
           plannedGrams:
-            component.plannedGramsInput === "" ? 0 : Number(component.plannedGramsInput),
+            component.plannedGramsInput === ""
+              ? 0
+              : Number(component.plannedGramsInput),
         };
       }
 
@@ -102,23 +109,28 @@ export default function App() {
   }, [components, calculatedPlate]);
 
   function createComponentsFromMenu() {
-    const parts = menuText.split(",").map(part => part.trim()).filter(Boolean);
+    const parts: string[] = menuText
+      .split(",")
+      .map((part: string) => part.trim())
+      .filter((part: string) => Boolean(part));
 
-    const newComponents: MealComponent[] = parts.map((part, index) => ({
-      id: makeId(),
-      query: part,
-      role:
-        parts.length === 1
-          ? "mainCarb"
-          : index === 0
-          ? "protein"
-          : index === 1
-          ? "mainCarb"
-          : "extraCarb",
-      carbsPer100g: 0,
-      plannedGrams: 0,
-      plannedGramsInput: undefined,
-    }));
+    const newComponents: MealComponent[] = parts.map(
+      (part: string, index: number) => ({
+        id: makeId(),
+        query: part,
+        role:
+          parts.length === 1
+            ? "mainCarb"
+            : index === 0
+            ? "protein"
+            : index === 1
+            ? "mainCarb"
+            : "extraCarb",
+        carbsPer100g: 0,
+        plannedGrams: 0,
+        plannedGramsInput: undefined,
+      })
+    );
 
     setComponents(newComponents);
   }
@@ -146,7 +158,12 @@ export default function App() {
     setComponents(current =>
       current.map(component =>
         component.id === componentId
-          ? { ...component, role, plannedGrams: 0, plannedGramsInput: undefined }
+          ? {
+              ...component,
+              role,
+              plannedGrams: 0,
+              plannedGramsInput: undefined,
+            }
           : component
       )
     );
@@ -217,7 +234,10 @@ export default function App() {
     weekMeals.find(meal => meal.id === selectedMealId) ?? weekMeals[0];
 
   const plannedTotalWeight =
-    selectedMeal?.components.reduce((sum, c) => sum + c.plannedGrams, 0) ?? 0;
+    selectedMeal?.components.reduce(
+      (sum: number, component: MealComponent) => sum + component.plannedGrams,
+      0
+    ) ?? 0;
 
   const plannedTotalCarbs = selectedMeal
     ? totalCarbsForComponents(selectedMeal.components)
@@ -230,8 +250,10 @@ export default function App() {
         ) / 10
       : 0;
 
-  const eatenByTotalWeight =
-    Math.max(Math.round((plannedTotalCarbs - totalLeftoverCarbs) * 10) / 10, 0);
+  const eatenByTotalWeight = Math.max(
+    Math.round((plannedTotalCarbs - totalLeftoverCarbs) * 10) / 10,
+    0
+  );
 
   return (
     <main>
@@ -346,7 +368,8 @@ export default function App() {
                       <br />
                       Ger:{" "}
                       <strong>
-                        {carbsForGrams(component.plannedGrams, carbsPer100g)} g kolhydrater
+                        {carbsForGrams(component.plannedGrams, carbsPer100g)} g
+                        kolhydrater
                       </strong>
                     </p>
                   </div>
@@ -451,10 +474,14 @@ export default function App() {
                 <h3>
                   Totalt påfyllning:{" "}
                   {selectedMeal.components
-                    .reduce((sum, component) => {
+                    .reduce((sum: number, component: MealComponent) => {
                       const carbsPer100g =
                         component.manualCarbsPer100g ?? component.carbsPer100g;
-                      return sum + carbsForGrams(Number(refills[component.id] ?? 0), carbsPer100g);
+
+                      return (
+                        sum +
+                        carbsForGrams(Number(refills[component.id] ?? 0), carbsPer100g)
+                      );
                     }, 0)
                     .toFixed(1)}{" "}
                   g kolhydrater
@@ -530,13 +557,16 @@ export default function App() {
                 <h2>
                   Totalt ätit enligt komponenter:{" "}
                   {selectedMeal.components
-                    .reduce((sum, component) => {
+                    .reduce((sum: number, component: MealComponent) => {
                       const carbsPer100g =
                         component.manualCarbsPer100g ?? component.carbsPer100g;
 
                       const leftover = Number(leftovers[component.id] ?? 0);
 
-                      return sum + eatenCarbs(component.plannedGrams, leftover, carbsPer100g);
+                      return (
+                        sum +
+                        eatenCarbs(component.plannedGrams, leftover, carbsPer100g)
+                      );
                     }, 0)
                     .toFixed(1)}{" "}
                   g kolhydrater
