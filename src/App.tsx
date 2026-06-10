@@ -257,7 +257,7 @@ export default function App() {
 
   return (
     <main>
-      <h1>Kolhydrat-Tallriken</h1>
+      <h1>SmartPortion</h1>
 
       <div className="tabs">
         <button
