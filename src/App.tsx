@@ -163,6 +163,7 @@ export default function App() {
               carbsPer100g,
               plannedGrams: 0,
               plannedGramsInput: undefined,
+              manualCarbsPer100g: undefined,
             }
           : component
       )
@@ -199,6 +200,8 @@ export default function App() {
           ? {
               ...component,
               manualCarbsPer100g: value === "" ? undefined : Number(value),
+              selectedFood: value === "" ? component.selectedFood : undefined,
+              carbsPer100g: value === "" ? component.carbsPer100g : 0,
               plannedGrams: 0,
               plannedGramsInput: undefined,
             }
@@ -342,7 +345,6 @@ export default function App() {
         <p>{description}</p>
 
         <div className="info-box">
-          <strong>Tips vid känd vikt</strong>
           <p>
             Om du vill utgå från faktisk vikt i stället för ett kolhydratmål:
             skriv <strong>0</strong> som kolhydratmål och ange vikten direkt
@@ -412,8 +414,10 @@ export default function App() {
               </select>
 
               <p>
-                Välj bästa träff från Livsmedelsverkets databas. Om träffen
-                inte stämmer kan du ange kolhydratvärdet manuellt nedan.
+                Välj bästa träff från Livsmedelsverkets databas. Om ingen träff
+                stämmer kan du prova att ändra i Måltidens delar ovan, till
+                exempel "pasta kokt" i stället för "pasta", eller ange
+                kolhydratvärdet manuellt om det finns tillgängligt.
               </p>
 
               {matches.map(food => (
@@ -485,7 +489,8 @@ export default function App() {
                   <input
                     type="number"
                     value={
-                      component.plannedGramsInput ?? String(component.plannedGrams)
+                      component.plannedGramsInput ??
+                      String(component.plannedGrams)
                     }
                     onChange={e =>
                       updateComponentGrams(
@@ -633,9 +638,11 @@ export default function App() {
                     </select>
 
                     <p>
-                      Välj den databaspost som bäst motsvarar maten som ska
-                      serveras. Om träffen inte stämmer kan du ange
-                      kolhydratvärdet manuellt nedan.
+                      Välj bästa träff från Livsmedelsverkets databas. Om ingen
+                      träff stämmer kan du prova att ändra i Måltidens delar
+                      ovan, till exempel "pasta kokt" i stället för "pasta",
+                      eller ange kolhydratvärdet manuellt om det finns
+                      tillgängligt.
                     </p>
 
                     {matches.map(food => (
@@ -724,8 +731,8 @@ export default function App() {
                           <br />
                           Ger:{" "}
                           <strong>
-                            {carbsForGrams(component.plannedGrams, carbsPer100g)} g
-                            kolhydrater
+                            {carbsForGrams(component.plannedGrams, carbsPer100g)}{" "}
+                            g kolhydrater
                           </strong>
                         </p>
                       </div>
@@ -838,8 +845,8 @@ export default function App() {
                           <p>
                             {component.plannedGrams} g
                             <br />
-                            {carbsForGrams(component.plannedGrams, carbsPer100g)} g
-                            kolhydrater
+                            {carbsForGrams(component.plannedGrams, carbsPer100g)}{" "}
+                            g kolhydrater
                           </p>
                         </div>
                       );
