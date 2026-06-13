@@ -16,36 +16,81 @@ export function calculatePlate(
   components: MealComponent[],
   targetCarbs: number
 ): MealComponent[] {
-  const activeComponents = components.filter(component => {
-    const carbsPer100g =
-      component.manualCarbsPer100g ?? component.carbsPer100g;
+  const mainCarbs = components.filter(c => c.role === "mainCarb");
+  const proteins = components.filter(c => c.role === "protein");
+  const extraCarbs = components.filter(c => c.role === "extraCarb");
 
-    return carbsPer100g > 0 && component.role !== "vegetable";
-  });
+  let remainingCarbs = targetCarbs;
+  const result = [...components];
 
-  if (activeComponents.length === 0) {
-    return components;
+  function updateComponent(id: string, grams: number) {
+    const index = result.findIndex(c => c.id === id);
+    if (index >= 0) {
+      result[index] = {
+        ...result[index],
+        plannedGrams: Math.round(grams),
+      };
+    }
   }
 
-  const carbsPerComponent = targetCarbs / activeComponents.length;
+  const mainCarb = mainCarbs[0];
+  const protein = proteins[0];
 
-  return components.map(component => {
+  if (mainCarb && protein) {
+    const mainCarbsPer100g =
+      mainCarb.manualCarbsPer100g ?? mainCarb.carbsPer100g;
+
+    const proteinCarbsPer100g =
+      protein.manualCarbsPer100g ?? protein.carbsPer100g;
+
+    const baseGrams = 80;
+
+    const mainCarbsAmount = carbsForGrams(baseGrams, mainCarbsPer100g);
+    const proteinCarbsAmount = carbsForGrams(baseGrams, proteinCarbsPer100g);
+
+    updateComponent(mainCarb.id, baseGrams);
+    updateComponent(protein.id, baseGrams);
+
+    remainingCarbs -= mainCarbsAmount + proteinCarbsAmount;
+  }
+
+  const adjustableComponents = result.filter(component => {
     const carbsPer100g =
       component.manualCarbsPer100g ?? component.carbsPer100g;
 
-    if (component.role === "vegetable" || carbsPer100g <= 0) {
+    return (
+      carbsPer100g > 0 &&
+      component.role !== "vegetable" &&
+      component.plannedGrams === 0
+    );
+  });
+
+  const componentsToFill =
+    extraCarbs.length > 0
+      ? adjustableComponents.filter(c => c.role === "extraCarb")
+      : adjustableComponents;
+
+  if (componentsToFill.length > 0 && remainingCarbs > 0) {
+    const carbsPerComponent = remainingCarbs / componentsToFill.length;
+
+    componentsToFill.forEach(component => {
+      const carbsPer100g =
+        component.manualCarbsPer100g ?? component.carbsPer100g;
+
+      const grams = (carbsPerComponent * 100) / carbsPer100g;
+      updateComponent(component.id, grams);
+    });
+  }
+
+  return result.map(component => {
+    if (component.role === "vegetable") {
       return {
         ...component,
-        plannedGrams: 0,
+        plannedGrams: component.plannedGrams || 50,
       };
     }
 
-    const plannedGrams = (carbsPerComponent * 100) / carbsPer100g;
-
-    return {
-      ...component,
-      plannedGrams: Math.round(plannedGrams),
-    };
+    return component;
   });
 }
 

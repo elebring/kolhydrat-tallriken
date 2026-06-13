@@ -11,10 +11,22 @@ import {
 import { searchFoods } from "./logic/search";
 import type { DayMeal, Food, MealComponent, MealRole, Weekday } from "./types";
 
-const STORAGE_KEY = "kolhydrat_tallriken_week_menu";
-const DRAFT_KEY = "kolhydrat_tallriken_draft";
+const WEEK_KEY = "kolhydrat_tallriken_week_menu";
+const LUNCH_DRAFT_KEY = "kolhydrat_tallriken_lunch_draft";
+const PARENT_OTHER_KEY = "kolhydrat_tallriken_parent_other";
+const PRESCHOOL_OTHER_KEY = "kolhydrat_tallriken_preschool_other";
 
 const weekdays: Weekday[] = ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag"];
+
+type TopTab = "parent" | "preschool";
+type ParentSubTab = "lunch" | "other";
+type PreschoolSubTab = "lunch" | "other";
+
+type CalculatorState = {
+  menuText: string;
+  targetCarbs: string;
+  components: MealComponent[];
+};
 
 function makeId() {
   return Math.random().toString(36).slice(2);
@@ -29,32 +41,55 @@ function loadJson<T>(key: string, fallback: T): T {
   }
 }
 
+function roleText(role: MealRole) {
+  if (role === "mainCarb") return "Kolhydratkälla";
+  if (role === "protein") return "Protein";
+  if (role === "extraCarb") return "Extra kolhydrat";
+  return "Grönsak";
+}
+
+const emptyCalculator: CalculatorState = {
+  menuText: "yoghurt, flingor, banan",
+  targetCarbs: "25",
+  components: [],
+};
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<"parent" | "preschool">("parent");
+  const [activeTab, setActiveTab] = useState<TopTab>("parent");
+  const [parentSubTab, setParentSubTab] = useState<ParentSubTab>("lunch");
+  const [preschoolSubTab, setPreschoolSubTab] = useState<PreschoolSubTab>("lunch");
+
   const [foods, setFoods] = useState<Food[]>([]);
   const [weekMeals, setWeekMeals] = useState<DayMeal[]>(() =>
-    loadJson<DayMeal[]>(STORAGE_KEY, [])
+    loadJson<DayMeal[]>(WEEK_KEY, [])
   );
 
-  const [weekday, setWeekday] = useState<Weekday>(() => {
-    const draft = loadJson<any>(DRAFT_KEY, null);
-    return draft?.weekday ?? "Måndag";
-  });
+  const lunchDraft = loadJson<any>(LUNCH_DRAFT_KEY, null);
 
-  const [menuText, setMenuText] = useState(() => {
-    const draft = loadJson<any>(DRAFT_KEY, null);
-    return draft?.menuText ?? "köttbullar, kokt potatis, lingonsylt";
-  });
+  const [weekday, setWeekday] = useState<Weekday>(
+    lunchDraft?.weekday ?? "Måndag"
+  );
+  const [menuText, setMenuText] = useState(
+    lunchDraft?.menuText ?? "köttbullar, kokt potatis, lingonsylt"
+  );
+  const [targetCarbs, setTargetCarbs] = useState(
+    String(lunchDraft?.targetCarbs ?? "35")
+  );
+  const [components, setComponents] = useState<MealComponent[]>(
+    lunchDraft?.components ?? []
+  );
 
-  const [targetCarbs, setTargetCarbs] = useState(() => {
-    const draft = loadJson<any>(DRAFT_KEY, null);
-    return String(draft?.targetCarbs ?? "35");
-  });
+  const [parentOther, setParentOther] = useState<CalculatorState>(() =>
+    loadJson<CalculatorState>(PARENT_OTHER_KEY, emptyCalculator)
+  );
 
-  const [components, setComponents] = useState<MealComponent[]>(() => {
-    const draft = loadJson<any>(DRAFT_KEY, null);
-    return draft?.components ?? [];
-  });
+  const [preschoolOther, setPreschoolOther] = useState<CalculatorState>(() =>
+    loadJson<CalculatorState>(PRESCHOOL_OTHER_KEY, {
+      menuText: "frukt, smörgås",
+      targetCarbs: "20",
+      components: [],
+    })
+  );
 
   const [selectedMealId, setSelectedMealId] = useState("");
   const [leftovers, setLeftovers] = useState<Record<string, string>>({});
@@ -66,28 +101,126 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(weekMeals));
+    localStorage.setItem(WEEK_KEY, JSON.stringify(weekMeals));
   }, [weekMeals]);
 
   useEffect(() => {
     localStorage.setItem(
-      DRAFT_KEY,
-      JSON.stringify({
-        weekday,
-        menuText,
-        targetCarbs,
-        components,
-      })
+      LUNCH_DRAFT_KEY,
+      JSON.stringify({ weekday, menuText, targetCarbs, components })
     );
   }, [weekday, menuText, targetCarbs, components]);
 
-  const calculatedPlate = useMemo(() => {
-    return calculatePlate(components, Number(targetCarbs));
-  }, [components, targetCarbs]);
+  useEffect(() => {
+    localStorage.setItem(PARENT_OTHER_KEY, JSON.stringify(parentOther));
+  }, [parentOther]);
 
-  const displayedPlate = useMemo(() => {
-    return components.map(component => {
-      const calculatedComponent = calculatedPlate.find(c => c.id === component.id);
+  useEffect(() => {
+    localStorage.setItem(PRESCHOOL_OTHER_KEY, JSON.stringify(preschoolOther));
+  }, [preschoolOther]);
+
+  function createComponentsFromText(text: string): MealComponent[] {
+    const parts: string[] = text
+      .split(",")
+      .map((part: string) => part.trim())
+      .filter((part: string) => Boolean(part));
+
+    return parts.map((part: string, index: number) => ({
+      id: makeId(),
+      query: part,
+      role:
+        parts.length === 1
+          ? "mainCarb"
+          : index === 0
+          ? "protein"
+          : index === 1
+          ? "mainCarb"
+          : "extraCarb",
+      carbsPer100g: 0,
+      plannedGrams: 0,
+      plannedGramsInput: undefined,
+    }));
+  }
+
+  async function selectFoodForComponents(
+    componentId: string,
+    food: Food,
+    setter: React.Dispatch<React.SetStateAction<MealComponent[]>>
+  ) {
+    const nutrition = await fetchNutrition(food.nummer);
+    const carbsPer100g = getCarbsPer100g(nutrition);
+
+    setter(current =>
+      current.map(component =>
+        component.id === componentId
+          ? {
+              ...component,
+              selectedFood: food,
+              carbsPer100g,
+              plannedGrams: 0,
+              plannedGramsInput: undefined,
+            }
+          : component
+      )
+    );
+  }
+
+  function updateComponentRole(
+    componentId: string,
+    role: MealRole,
+    setter: React.Dispatch<React.SetStateAction<MealComponent[]>>
+  ) {
+    setter(current =>
+      current.map(component =>
+        component.id === componentId
+          ? { ...component, role, plannedGrams: 0, plannedGramsInput: undefined }
+          : component
+      )
+    );
+  }
+
+  function updateComponentManualCarbs(
+    componentId: string,
+    value: string,
+    setter: React.Dispatch<React.SetStateAction<MealComponent[]>>
+  ) {
+    setter(current =>
+      current.map(component =>
+        component.id === componentId
+          ? {
+              ...component,
+              manualCarbsPer100g: value === "" ? undefined : Number(value),
+              plannedGrams: 0,
+              plannedGramsInput: undefined,
+            }
+          : component
+      )
+    );
+  }
+
+  function updateComponentGrams(
+    componentId: string,
+    value: string,
+    setter: React.Dispatch<React.SetStateAction<MealComponent[]>>
+  ) {
+    setter(current =>
+      current.map(component =>
+        component.id === componentId
+          ? {
+              ...component,
+              plannedGramsInput: value,
+              plannedGrams: value === "" ? 0 : Number(value),
+            }
+          : component
+      )
+    );
+  }
+
+  function getDisplayedPlate(items: MealComponent[], carbs: string) {
+    const calculated = calculatePlate(items, Number(carbs));
+
+    return items.map(component => {
+      const calculatedComponent = calculated.find(c => c.id === component.id);
       const calculatedGrams = calculatedComponent?.plannedGrams ?? 0;
 
       if (component.plannedGramsInput !== undefined) {
@@ -106,129 +239,12 @@ export default function App() {
           component.plannedGrams > 0 ? component.plannedGrams : calculatedGrams,
       };
     });
-  }, [components, calculatedPlate]);
-
-  function createComponentsFromMenu() {
-    const parts: string[] = menuText
-      .split(",")
-      .map((part: string) => part.trim())
-      .filter((part: string) => Boolean(part));
-
-    const newComponents: MealComponent[] = parts.map(
-      (part: string, index: number) => ({
-        id: makeId(),
-        query: part,
-        role:
-          parts.length === 1
-            ? "mainCarb"
-            : index === 0
-            ? "protein"
-            : index === 1
-            ? "mainCarb"
-            : "extraCarb",
-        carbsPer100g: 0,
-        plannedGrams: 0,
-        plannedGramsInput: undefined,
-      })
-    );
-
-    setComponents(newComponents);
   }
 
-  async function selectFood(componentId: string, food: Food) {
-    const nutrition = await fetchNutrition(food.nummer);
-    const carbsPer100g = getCarbsPer100g(nutrition);
-
-    setComponents(current =>
-      current.map(component =>
-        component.id === componentId
-          ? {
-              ...component,
-              selectedFood: food,
-              carbsPer100g,
-              plannedGrams: 0,
-              plannedGramsInput: undefined,
-            }
-          : component
-      )
-    );
-  }
-
-  function updateRole(componentId: string, role: MealRole) {
-    setComponents(current =>
-      current.map(component =>
-        component.id === componentId
-          ? {
-              ...component,
-              role,
-              plannedGrams: 0,
-              plannedGramsInput: undefined,
-            }
-          : component
-      )
-    );
-  }
-
-  function updateManualCarbs(componentId: string, value: string) {
-    setComponents(current =>
-      current.map(component =>
-        component.id === componentId
-          ? {
-              ...component,
-              manualCarbsPer100g: value === "" ? undefined : Number(value),
-              plannedGrams: 0,
-              plannedGramsInput: undefined,
-            }
-          : component
-      )
-    );
-  }
-
-  function updatePlannedGrams(componentId: string, value: string) {
-    setComponents(current =>
-      current.map(component =>
-        component.id === componentId
-          ? {
-              ...component,
-              plannedGramsInput: value,
-              plannedGrams: value === "" ? 0 : Number(value),
-            }
-          : component
-      )
-    );
-  }
-
-  function saveMeal() {
-    const meal: DayMeal = {
-      id: makeId(),
-      weekday,
-      menuText,
-      targetCarbs: Number(targetCarbs),
-      components: displayedPlate.map(component => ({
-        ...component,
-        plannedGramsInput: String(component.plannedGrams),
-      })),
-    };
-
-    setWeekMeals(current => {
-      const next = [...current.filter(m => m.weekday !== weekday), meal];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-
-    setSelectedMealId(meal.id);
-    setActiveTab("preschool");
-  }
-
-  function clearAll() {
-    setWeekMeals([]);
-    setComponents([]);
-    setLeftovers({});
-    setTotalLeftover("");
-    setRefills({});
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(DRAFT_KEY);
-  }
+  const displayedLunchPlate = useMemo(
+    () => getDisplayedPlate(components, targetCarbs),
+    [components, targetCarbs]
+  );
 
   const selectedMeal =
     weekMeals.find(meal => meal.id === selectedMealId) ?? weekMeals[0];
@@ -255,16 +271,240 @@ export default function App() {
     0
   );
 
+  function saveLunchMeal() {
+    const meal: DayMeal = {
+      id: makeId(),
+      weekday,
+      menuText,
+      targetCarbs: Number(targetCarbs),
+      components: displayedLunchPlate.map(component => ({
+        ...component,
+        plannedGramsInput: String(component.plannedGrams),
+      })),
+    };
+
+    setWeekMeals(current => {
+      const next = [...current.filter(m => m.weekday !== weekday), meal];
+      localStorage.setItem(WEEK_KEY, JSON.stringify(next));
+      return next;
+    });
+
+    setSelectedMealId(meal.id);
+    setActiveTab("preschool");
+    setPreschoolSubTab("lunch");
+  }
+
+  function clearAll() {
+    setWeekMeals([]);
+    setComponents([]);
+    setLeftovers({});
+    setTotalLeftover("");
+    setRefills({});
+    localStorage.removeItem(WEEK_KEY);
+    localStorage.removeItem(LUNCH_DRAFT_KEY);
+  }
+
+  function Calculator({
+    title,
+    description,
+    state,
+    setState,
+  }: {
+    title: string;
+    description: string;
+    state: CalculatorState;
+    setState: React.Dispatch<React.SetStateAction<CalculatorState>>;
+  }) {
+    const plate = getDisplayedPlate(state.components, state.targetCarbs);
+
+    const setCalculatorComponents: React.Dispatch<
+      React.SetStateAction<MealComponent[]>
+    > = update => {
+      setState(current => ({
+        ...current,
+        components:
+          typeof update === "function" ? update(current.components) : update,
+      }));
+    };
+
+    return (
+      <section>
+        <h2>{title}</h2>
+        <p>{description}</p>
+
+        <label>Måltidens delar</label>
+        <input
+          value={state.menuText}
+          onChange={e =>
+            setState(current => ({ ...current, menuText: e.target.value }))
+          }
+        />
+
+        <label>Kolhydratmål</label>
+        <input
+          type="number"
+          value={state.targetCarbs}
+          onChange={e =>
+            setState(current => ({ ...current, targetCarbs: e.target.value }))
+          }
+        />
+
+        <button
+          onClick={() =>
+            setState(current => ({
+              ...current,
+              components: createComponentsFromText(current.menuText),
+            }))
+          }
+        >
+          Hämta matvaror
+        </button>
+
+        {state.components.map(component => {
+          const matches = searchFoods(component.query, foods);
+
+          return (
+            <div className="card" key={component.id}>
+              <span className={`role-label role-${component.role}`}>
+                {roleText(component.role)}
+              </span>
+
+              <h3>{component.query}</h3>
+
+              <label>Roll på tallriken</label>
+              <select
+                value={component.role}
+                onChange={e =>
+                  updateComponentRole(
+                    component.id,
+                    e.target.value as MealRole,
+                    setCalculatorComponents
+                  )
+                }
+              >
+                <option value="mainCarb">Kolhydratkälla</option>
+                <option value="protein">Protein</option>
+                <option value="extraCarb">Extra kolhydrat</option>
+                <option value="vegetable">Grönsak</option>
+              </select>
+
+              <p>Välj bästa träff från Livsmedelsverkets databas.</p>
+
+              {matches.map(food => (
+                <button
+                  key={food.nummer}
+                  onClick={() =>
+                    selectFoodForComponents(
+                      component.id,
+                      food,
+                      setCalculatorComponents
+                    )
+                  }
+                >
+                  {food.namn}
+                </button>
+              ))}
+
+              {component.selectedFood && (
+                <p>
+                  Matchad mot: <strong>{component.selectedFood.namn}</strong>
+                  <br />
+                  {component.carbsPer100g} g kolhydrater / 100 g
+                </p>
+              )}
+
+              <label>Manuellt kolhydratvärde / 100 g</label>
+              <input
+                type="number"
+                placeholder="Valfritt"
+                value={component.manualCarbsPer100g ?? ""}
+                onChange={e =>
+                  updateComponentManualCarbs(
+                    component.id,
+                    e.target.value,
+                    setCalculatorComponents
+                  )
+                }
+              />
+            </div>
+          );
+        })}
+
+        {state.components.length > 0 && (
+          <>
+            <h2>Portionsförslag</h2>
+            <p>
+              Förslaget kan justeras manuellt. Kolhydraterna räknas om direkt
+              när mängden ändras.
+            </p>
+
+            {plate.map(component => {
+              const carbsPer100g =
+                component.manualCarbsPer100g ?? component.carbsPer100g;
+
+              return (
+                <div className="result" key={component.id}>
+                  <span className={`role-label role-${component.role}`}>
+                    {roleText(component.role)}
+                  </span>
+
+                  <strong>{component.query}</strong>
+
+                  <label>Mängd, gram</label>
+                  <input
+                    type="number"
+                    value={
+                      component.plannedGramsInput ?? String(component.plannedGrams)
+                    }
+                    onChange={e =>
+                      updateComponentGrams(
+                        component.id,
+                        e.target.value,
+                        setCalculatorComponents
+                      )
+                    }
+                  />
+
+                  <p>
+                    {carbsPer100g} g kolhydrater / 100 g
+                    <br />
+                    Ger:{" "}
+                    <strong>
+                      {carbsForGrams(component.plannedGrams, carbsPer100g)} g
+                      kolhydrater
+                    </strong>
+                  </p>
+                </div>
+              );
+            })}
+
+            <div className="summary-card">
+              <strong>Sammanfattning</strong>
+              <p>
+                Totalt:{" "}
+                <strong>{totalCarbsForComponents(plate)} g kolhydrater</strong>
+              </p>
+            </div>
+          </>
+        )}
+      </section>
+    );
+  }
+
   return (
     <main>
       <h1>SmartPortion</h1>
+      <p className="app-intro">
+        Planera portioner, räkna kolhydrater och ge tydliga underlag mellan hem
+        och förskola.
+      </p>
 
       <div className="tabs">
         <button
           className={activeTab === "parent" ? "active" : ""}
           onClick={() => setActiveTab("parent")}
         >
-          Föräldrar
+          Förälder
         </button>
 
         <button
@@ -276,280 +516,171 @@ export default function App() {
       </div>
 
       {activeTab === "parent" && (
-        <section>
-          <h2>Föräldrar: lägg in matsedel</h2>
+        <>
+          <div className="subtabs">
+            <button
+              className={parentSubTab === "lunch" ? "active" : ""}
+              onClick={() => setParentSubTab("lunch")}
+            >
+              Beräkna lunch
+            </button>
 
-          <label>Veckodag</label>
-          <select value={weekday} onChange={e => setWeekday(e.target.value as Weekday)}>
-            {weekdays.map(day => (
-              <option key={day}>{day}</option>
-            ))}
-          </select>
+            <button
+              className={parentSubTab === "other" ? "active" : ""}
+              onClick={() => setParentSubTab("other")}
+            >
+              Beräkna annan måltid
+            </button>
+          </div>
 
-          <label>Meny</label>
-          <input value={menuText} onChange={e => setMenuText(e.target.value)} />
+          {parentSubTab === "lunch" && (
+            <section>
+              <h2>Beräkna lunch</h2>
+              <p>
+                Lägg in dagens lunch, välj träffar från Livsmedelsverket och
+                spara förslaget till förskolefliken.
+              </p>
 
-          <label>Totalt kolhydratmål</label>
-          <input
-            type="number"
-            value={targetCarbs}
-            onChange={e => setTargetCarbs(e.target.value)}
-          />
-
-          <button onClick={createComponentsFromMenu}>Hämta matvaror</button>
-
-          {components.map(component => {
-            const matches = searchFoods(component.query, foods);
-
-            return (
-              <div className="card" key={component.id}>
-                <h3>{component.query}</h3>
-
-                <label>Roll på tallriken</label>
-                <select
-                  value={component.role}
-                  onChange={e => updateRole(component.id, e.target.value as MealRole)}
-                >
-                  <option value="mainCarb">Kolhydratkälla</option>
-                  <option value="protein">Protein</option>
-                  <option value="extraCarb">Extra kolhydrat</option>
-                  <option value="vegetable">Grönsak</option>
-                </select>
-
-                <p>Förslag från Livsmedelsverket:</p>
-
-                {matches.map(food => (
-                  <button key={food.nummer} onClick={() => selectFood(component.id, food)}>
-                    {food.namn}
-                  </button>
+              <label>Veckodag</label>
+              <select
+                value={weekday}
+                onChange={e => setWeekday(e.target.value as Weekday)}
+              >
+                {weekdays.map(day => (
+                  <option key={day}>{day}</option>
                 ))}
+              </select>
 
-                {component.selectedFood && (
-                  <p>
-                    Matchad mot Livsmedelsverket:{" "}
-                    <strong>{component.selectedFood.namn}</strong>
-                    <br />
-                    {component.carbsPer100g} g kolhydrater / 100 g
-                  </p>
-                )}
+              <label>Meny</label>
+              <input
+                value={menuText}
+                onChange={e => setMenuText(e.target.value)}
+              />
 
-                <label>Manuellt kolhydratvärde / 100 g</label>
-                <input
-                  type="number"
-                  placeholder="Valfritt"
-                  value={component.manualCarbsPer100g ?? ""}
-                  onChange={e => updateManualCarbs(component.id, e.target.value)}
-                />
-              </div>
-            );
-          })}
+              <label>Totalt kolhydratmål</label>
+              <input
+                type="number"
+                value={targetCarbs}
+                onChange={e => setTargetCarbs(e.target.value)}
+              />
 
-          {components.length > 0 && (
-            <>
-              <h2>Tallriksförslag</h2>
+              <button onClick={() => setComponents(createComponentsFromText(menuText))}>
+                Hämta matvaror
+              </button>
 
-              {displayedPlate.map(component => {
-                const carbsPer100g =
-                  component.manualCarbsPer100g ?? component.carbsPer100g;
+              {components.map(component => {
+                const matches = searchFoods(component.query, foods);
 
                 return (
-                  <div className="result" key={component.id}>
-                    <strong>{component.query}</strong>
+                  <div className="card" key={component.id}>
+                    <span className={`role-label role-${component.role}`}>
+                      {roleText(component.role)}
+                    </span>
 
-                    <label>Mängd i tallriksförslag, gram</label>
-                    <input
-                      type="number"
-                      value={component.plannedGramsInput ?? String(component.plannedGrams)}
-                      onChange={e => updatePlannedGrams(component.id, e.target.value)}
-                    />
+                    <h3>{component.query}</h3>
+
+                    <label>Roll på tallriken</label>
+                    <select
+                      value={component.role}
+                      onChange={e =>
+                        updateComponentRole(
+                          component.id,
+                          e.target.value as MealRole,
+                          setComponents
+                        )
+                      }
+                    >
+                      <option value="mainCarb">Kolhydratkälla</option>
+                      <option value="protein">Protein</option>
+                      <option value="extraCarb">Extra kolhydrat</option>
+                      <option value="vegetable">Grönsak</option>
+                    </select>
 
                     <p>
-                      {carbsPer100g} g kolhydrater / 100 g
-                      <br />
-                      Ger:{" "}
-                      <strong>
-                        {carbsForGrams(component.plannedGrams, carbsPer100g)} g
-                        kolhydrater
-                      </strong>
+                      Välj den databaspost som bäst motsvarar maten som ska
+                      serveras.
                     </p>
+
+                    {matches.map(food => (
+                      <button
+                        key={food.nummer}
+                        onClick={() =>
+                          selectFoodForComponents(component.id, food, setComponents)
+                        }
+                      >
+                        {food.namn}
+                      </button>
+                    ))}
+
+                    {component.selectedFood && (
+                      <p>
+                        Matchad mot: <strong>{component.selectedFood.namn}</strong>
+                        <br />
+                        {component.carbsPer100g} g kolhydrater / 100 g
+                      </p>
+                    )}
+
+                    <label>Manuellt kolhydratvärde / 100 g</label>
+                    <input
+                      type="number"
+                      placeholder="Valfritt"
+                      value={component.manualCarbsPer100g ?? ""}
+                      onChange={e =>
+                        updateComponentManualCarbs(
+                          component.id,
+                          e.target.value,
+                          setComponents
+                        )
+                      }
+                    />
                   </div>
                 );
               })}
 
-              <h3>
-                Totalt i tallriksförslag: {totalCarbsForComponents(displayedPlate)} g
-                kolhydrater
-              </h3>
-
-              <button onClick={saveMeal}>Spara och för över till förskola</button>
-            </>
-          )}
-
-          <button className="danger" onClick={clearAll}>
-            Rensa hela veckan
-          </button>
-        </section>
-      )}
-
-      {activeTab === "preschool" && (
-        <section>
-          <h2>Förskola</h2>
-
-          {weekMeals.length === 0 && <p>Inga sparade måltider ännu.</p>}
-
-          {weekMeals.length > 0 && selectedMeal && (
-            <>
-              <label>Välj dag</label>
-              <select value={selectedMeal.id} onChange={e => setSelectedMealId(e.target.value)}>
-                {weekMeals.map(meal => (
-                  <option key={meal.id} value={meal.id}>
-                    {meal.weekday}: {meal.menuText}
-                  </option>
-                ))}
-              </select>
-
-              <h3>{selectedMeal.weekday}</h3>
-              <p>{selectedMeal.menuText}</p>
-
-              <section>
-                <h2>Planerad portion</h2>
-
-                {selectedMeal.components.map(component => {
-                  const carbsPer100g =
-                    component.manualCarbsPer100g ?? component.carbsPer100g;
-
-                  return (
-                    <div className="result" key={component.id}>
-                      <strong>{component.query}</strong>
-                      <p>
-                        {component.plannedGrams} g
-                        <br />
-                        {carbsForGrams(component.plannedGrams, carbsPer100g)} g
-                        kolhydrater
-                      </p>
-                    </div>
-                  );
-                })}
-
-                <h3>
-                  Planerat totalt: {plannedTotalWeight} g mat / {plannedTotalCarbs} g
-                  kolhydrater
-                </h3>
-              </section>
-
-              <section>
-                <h2>Påfyllning</h2>
-                <p>Ange extra mängd per komponent om barnet tar mer mat.</p>
-
-                {selectedMeal.components.map(component => {
-                  const carbsPer100g =
-                    component.manualCarbsPer100g ?? component.carbsPer100g;
-
-                  const refillGrams = Number(refills[component.id] ?? 0);
-                  const refillCarbs = carbsForGrams(refillGrams, carbsPer100g);
-
-                  return (
-                    <div className="card" key={component.id}>
-                      <strong>{component.query}</strong>
-
-                      <label>Påfyllning, gram</label>
-                      <input
-                        type="number"
-                        value={refills[component.id] ?? ""}
-                        onChange={e =>
-                          setRefills(current => ({
-                            ...current,
-                            [component.id]: e.target.value,
-                          }))
-                        }
-                      />
-
-                      <p>
-                        Påfyllning: <strong>{refillCarbs} g kolhydrater</strong>
-                      </p>
-                    </div>
-                  );
-                })}
-
-                <h3>
-                  Totalt påfyllning:{" "}
-                  {selectedMeal.components
-                    .reduce((sum: number, component: MealComponent) => {
-                      const carbsPer100g =
-                        component.manualCarbsPer100g ?? component.carbsPer100g;
-
-                      return (
-                        sum +
-                        carbsForGrams(Number(refills[component.id] ?? 0), carbsPer100g)
-                      );
-                    }, 0)
-                    .toFixed(1)}{" "}
-                  g kolhydrater
-                </h3>
-              </section>
-
-              <section>
-                <h2>Beräkning av rester</h2>
-
-                <div className="card option-card">
-                  <h3>Alternativ 1: total vikt kvar</h3>
-
-                  <label>Total vikt kvar på tallriken, gram</label>
-                  <input
-                    type="number"
-                    value={totalLeftover}
-                    onChange={e => setTotalLeftover(e.target.value)}
-                  />
-
+              {components.length > 0 && (
+                <>
+                  <h2>Tallriksförslag</h2>
                   <p>
-                    Uppskattat ätit:{" "}
-                    <strong>{eatenByTotalWeight} g kolhydrater</strong>
+                    Justera gram manuellt om portionen behöver anpassas. Det
+                    sparade förslaget förs över till förskolan.
                   </p>
 
-                  <p>
-                    Denna beräkning antar att resterna har samma blandning som den
-                    planerade portionen.
-                  </p>
-                </div>
-
-                <div className="card option-card">
-                  <h3>Alternativ 2: vikt kvar per komponent</h3>
-
-                  {selectedMeal.components.map(component => {
+                  {displayedLunchPlate.map(component => {
                     const carbsPer100g =
                       component.manualCarbsPer100g ?? component.carbsPer100g;
 
-                    const leftover = Number(leftovers[component.id] ?? 0);
-                    const eaten = eatenCarbs(
-                      component.plannedGrams,
-                      leftover,
-                      carbsPer100g
-                    );
-
                     return (
-                      <div className="sub-card" key={component.id}>
+                      <div className="result" key={component.id}>
+                        <span className={`role-label role-${component.role}`}>
+                          {roleText(component.role)}
+                        </span>
+
                         <strong>{component.query}</strong>
 
-                        <p>
-                          Planerad portion: {component.plannedGrams} g
-                          <br />
-                          Kolhydrater: {carbsPer100g} g / 100 g
-                        </p>
-
-                        <label>Kvar på tallriken, gram</label>
+                        <label>Mängd, gram</label>
                         <input
                           type="number"
-                          value={leftovers[component.id] ?? ""}
+                          value={
+                            component.plannedGramsInput ??
+                            String(component.plannedGrams)
+                          }
                           onChange={e =>
-                            setLeftovers(current => ({
-                              ...current,
-                              [component.id]: e.target.value,
-                            }))
+                            updateComponentGrams(
+                              component.id,
+                              e.target.value,
+                              setComponents
+                            )
                           }
                         />
 
                         <p>
-                          Uppskattat ätit: <strong>{eaten} g kolhydrater</strong>
+                          {carbsPer100g} g kolhydrater / 100 g
+                          <br />
+                          Ger:{" "}
+                          <strong>
+                            {carbsForGrams(component.plannedGrams, carbsPer100g)} g
+                            kolhydrater
+                          </strong>
                         </p>
                       </div>
                     );
@@ -558,30 +689,304 @@ export default function App() {
                   <div className="summary-card">
                     <strong>Sammanfattning</strong>
                     <p>
-                      Totalt ätit enligt komponenter:{" "}
+                      Totalt i tallriksförslag:{" "}
                       <strong>
+                        {totalCarbsForComponents(displayedLunchPlate)} g
+                        kolhydrater
+                      </strong>
+                    </p>
+                  </div>
+
+                  <button onClick={saveLunchMeal}>
+                    Spara och för över till förskola
+                  </button>
+                </>
+              )}
+
+              <button className="danger" onClick={clearAll}>
+                Rensa hela veckan
+              </button>
+            </section>
+          )}
+
+          {parentSubTab === "other" && (
+            <Calculator
+              title="Beräkna annan måltid"
+              description="Använd för mellanmål, fruktstund, utflykt eller andra måltider. Beräkningen sparas separat men förs inte över till förskolan."
+              state={parentOther}
+              setState={setParentOther}
+            />
+          )}
+        </>
+      )}
+
+      {activeTab === "preschool" && (
+        <>
+          <div className="subtabs">
+            <button
+              className={preschoolSubTab === "lunch" ? "active" : ""}
+              onClick={() => setPreschoolSubTab("lunch")}
+            >
+              Lunchförslag
+            </button>
+
+            <button
+              className={preschoolSubTab === "other" ? "active" : ""}
+              onClick={() => setPreschoolSubTab("other")}
+            >
+              Beräkna annan måltid
+            </button>
+          </div>
+
+          {preschoolSubTab === "other" && (
+            <Calculator
+              title="Beräkna annan måltid"
+              description="Använd vid exempelvis extra mellanmål eller påfyllning som inte hör till lunchförslaget. Beräkningen sparas separat på denna enhet."
+              state={preschoolOther}
+              setState={setPreschoolOther}
+            />
+          )}
+
+          {preschoolSubTab === "lunch" && (
+            <section>
+              <h2>Lunchförslag</h2>
+              <p>
+                Här visas lunchförslag som sparats av förälder. Förskolan kan
+                beräkna påfyllning och rester.
+              </p>
+
+              {weekMeals.length === 0 && <p>Inga sparade måltider ännu.</p>}
+
+              {weekMeals.length > 0 && selectedMeal && (
+                <>
+                  <label>Välj dag</label>
+                  <select
+                    value={selectedMeal.id}
+                    onChange={e => setSelectedMealId(e.target.value)}
+                  >
+                    {weekMeals.map(meal => (
+                      <option key={meal.id} value={meal.id}>
+                        {meal.weekday}: {meal.menuText}
+                      </option>
+                    ))}
+                  </select>
+
+                  <h3>{selectedMeal.weekday}</h3>
+                  <p>{selectedMeal.menuText}</p>
+
+                  <section>
+                    <h2>Planerad portion</h2>
+                    <p>Den portion som har sparats från föräldrafliken.</p>
+
+                    {selectedMeal.components.map(component => {
+                      const carbsPer100g =
+                        component.manualCarbsPer100g ?? component.carbsPer100g;
+
+                      return (
+                        <div className="result" key={component.id}>
+                          <span className={`role-label role-${component.role}`}>
+                            {roleText(component.role)}
+                          </span>
+
+                          <strong>{component.query}</strong>
+                          <p>
+                            {component.plannedGrams} g
+                            <br />
+                            {carbsForGrams(component.plannedGrams, carbsPer100g)} g
+                            kolhydrater
+                          </p>
+                        </div>
+                      );
+                    })}
+
+                    <div className="summary-card">
+                      <strong>Planerat totalt</strong>
+                      <p>
+                        {plannedTotalWeight} g mat /{" "}
+                        <strong>{plannedTotalCarbs} g kolhydrater</strong>
+                      </p>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h2>Påfyllning</h2>
+                    <p>
+                      Ange extra mängd per komponent om barnet får mer mat utöver
+                      den planerade portionen.
+                    </p>
+
+                    {selectedMeal.components.map(component => {
+                      const carbsPer100g =
+                        component.manualCarbsPer100g ?? component.carbsPer100g;
+
+                      const refillGrams = Number(refills[component.id] ?? 0);
+                      const refillCarbs = carbsForGrams(refillGrams, carbsPer100g);
+
+                      return (
+                        <div className="card" key={component.id}>
+                          <span className={`role-label role-${component.role}`}>
+                            {roleText(component.role)}
+                          </span>
+
+                          <strong>{component.query}</strong>
+
+                          <label>Påfyllning, gram</label>
+                          <input
+                            type="number"
+                            value={refills[component.id] ?? ""}
+                            onChange={e =>
+                              setRefills(current => ({
+                                ...current,
+                                [component.id]: e.target.value,
+                              }))
+                            }
+                          />
+
+                          <p>
+                            Påfyllning: <strong>{refillCarbs} g kolhydrater</strong>
+                          </p>
+                        </div>
+                      );
+                    })}
+
+                    <div className="summary-card">
+                      <strong>Totalt påfyllning</strong>
+                      <p>
                         {selectedMeal.components
                           .reduce((sum: number, component: MealComponent) => {
                             const carbsPer100g =
-                              component.manualCarbsPer100g ?? component.carbsPer100g;
-
-                            const leftover = Number(leftovers[component.id] ?? 0);
+                              component.manualCarbsPer100g ??
+                              component.carbsPer100g;
 
                             return (
                               sum +
-                              eatenCarbs(component.plannedGrams, leftover, carbsPer100g)
+                              carbsForGrams(
+                                Number(refills[component.id] ?? 0),
+                                carbsPer100g
+                              )
                             );
                           }, 0)
                           .toFixed(1)}{" "}
                         g kolhydrater
-                      </strong>
+                      </p>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h2>Beräkning av rester</h2>
+                    <p>
+                      Välj antingen total vikt kvar eller väg kvarvarande mängd
+                      per komponent.
                     </p>
-                  </div>
-                </div>
-              </section>
-            </>
+
+                    <div className="card option-card">
+                      <h3>Alternativ 1: total vikt kvar</h3>
+
+                      <label>Total vikt kvar på tallriken, gram</label>
+                      <input
+                        type="number"
+                        value={totalLeftover}
+                        onChange={e => setTotalLeftover(e.target.value)}
+                      />
+
+                      <p>
+                        Uppskattat ätit:{" "}
+                        <strong>{eatenByTotalWeight} g kolhydrater</strong>
+                      </p>
+
+                      <small>
+                        Beräkningen antar att resterna har ungefär samma
+                        blandning som den planerade portionen.
+                      </small>
+                    </div>
+
+                    <div className="card option-card">
+                      <h3>Alternativ 2: vikt kvar per komponent</h3>
+
+                      {selectedMeal.components.map(component => {
+                        const carbsPer100g =
+                          component.manualCarbsPer100g ?? component.carbsPer100g;
+
+                        const leftover = Number(leftovers[component.id] ?? 0);
+                        const eaten = eatenCarbs(
+                          component.plannedGrams,
+                          leftover,
+                          carbsPer100g
+                        );
+
+                        return (
+                          <div className="sub-card" key={component.id}>
+                            <span className={`role-label role-${component.role}`}>
+                              {roleText(component.role)}
+                            </span>
+
+                            <strong>{component.query}</strong>
+
+                            <p>
+                              Planerad portion: {component.plannedGrams} g
+                              <br />
+                              Kolhydrater: {carbsPer100g} g / 100 g
+                            </p>
+
+                            <label>Kvar på tallriken, gram</label>
+                            <input
+                              type="number"
+                              value={leftovers[component.id] ?? ""}
+                              onChange={e =>
+                                setLeftovers(current => ({
+                                  ...current,
+                                  [component.id]: e.target.value,
+                                }))
+                              }
+                            />
+
+                            <p>
+                              Uppskattat ätit:{" "}
+                              <strong>{eaten} g kolhydrater</strong>
+                            </p>
+                          </div>
+                        );
+                      })}
+
+                      <div className="summary-card">
+                        <strong>Sammanfattning</strong>
+                        <p>
+                          Totalt ätit enligt komponenter:{" "}
+                          <strong>
+                            {selectedMeal.components
+                              .reduce(
+                                (sum: number, component: MealComponent) => {
+                                  const carbsPer100g =
+                                    component.manualCarbsPer100g ??
+                                    component.carbsPer100g;
+
+                                  const leftover = Number(
+                                    leftovers[component.id] ?? 0
+                                  );
+
+                                  return (
+                                    sum +
+                                    eatenCarbs(
+                                      component.plannedGrams,
+                                      leftover,
+                                      carbsPer100g
+                                    )
+                                  );
+                                },
+                                0
+                              )
+                              .toFixed(1)}{" "}
+                            g kolhydrater
+                          </strong>
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+                </>
+              )}
+            </section>
           )}
-        </section>
+        </>
       )}
     </main>
   );
