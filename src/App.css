@@ -34,13 +34,7 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-
-  background: linear-gradient(
-    180deg,
-    #e7f3fb 0px,
-    var(--bg) 260px
-  );
-
+  background: linear-gradient(180deg, #e7f3fb 0px, var(--bg) 260px);
   color: var(--text);
 }
 
@@ -87,20 +81,11 @@ strong {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-
   margin: 22px 0 14px;
-
-  background: linear-gradient(
-    135deg,
-    var(--primary),
-    var(--primary-dark)
-  );
-
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   padding: 7px;
   border-radius: 20px;
-
-  box-shadow:
-    0 10px 28px rgba(29, 117, 187, 0.22);
+  box-shadow: 0 10px 28px rgba(29, 117, 187, 0.22);
 }
 
 .tabs button {
@@ -118,20 +103,13 @@ strong {
 .subtabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-
   gap: 8px;
-
   margin-bottom: 20px;
-
   background: white;
-
   padding: 6px;
-
   border-radius: 16px;
   border: 1px solid var(--border);
-
-  box-shadow:
-    0 4px 12px rgba(23, 32, 51, 0.05);
+  box-shadow: 0 4px 12px rgba(23, 32, 51, 0.05);
 }
 
 .subtabs button {
@@ -150,26 +128,19 @@ button,
 input,
 select {
   width: 100%;
-
   padding: 13px 14px;
-
   margin-top: 6px;
   margin-bottom: 14px;
-
   border-radius: 13px;
-
   font-size: 16px;
-
   border: 1px solid var(--border);
 }
 
 button {
   cursor: pointer;
   font-weight: 600;
-
   background: white;
   color: var(--primary-dark);
-
   transition: 0.15s ease;
 }
 
@@ -196,15 +167,10 @@ label {
 
 section {
   background: white;
-
   border-radius: 22px;
-
   padding: 18px;
-
   margin-bottom: 18px;
-
   border: 1px solid rgba(216, 228, 239, 0.9);
-
   box-shadow: var(--shadow);
 }
 
@@ -230,9 +196,7 @@ section section {
 
 .result {
   background: white;
-
   border: 1px solid var(--border);
-
   border-left: 6px solid var(--primary);
 }
 
@@ -258,13 +222,9 @@ section section {
 
 .info-box {
   background: var(--primary-soft);
-
   border: 1px solid rgba(29, 117, 187, 0.2);
-
   border-radius: 16px;
-
   padding: 14px;
-
   margin-bottom: 18px;
 }
 
@@ -274,14 +234,10 @@ section section {
 
 .role-label {
   display: inline-block;
-
   padding: 4px 10px;
-
   border-radius: 999px;
-
   font-size: 13px;
   font-weight: 700;
-
   margin-bottom: 8px;
 }
 
@@ -303,6 +259,20 @@ section section {
 .role-vegetable {
   background: #e8f7f0;
   color: #166534;
+}
+
+.food-option {
+  text-align: left;
+}
+
+.food-option.selected {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.food-option.selected::after {
+  content: " ✓";
 }
 
 .danger {

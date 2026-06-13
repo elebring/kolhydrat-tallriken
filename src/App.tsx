@@ -355,7 +355,11 @@ export default function App() {
         <input
           value={state.menuText}
           onChange={e =>
-            setState(current => ({ ...current, menuText: e.target.value }))
+            setState(current => ({
+              ...current,
+              menuText: e.target.value,
+              components: [],
+            }))
           }
         />
 
@@ -407,11 +411,19 @@ export default function App() {
                 <option value="vegetable">Grönsak</option>
               </select>
 
-              <p>Välj bästa träff från Livsmedelsverkets databas.</p>
+              <p>
+                Välj bästa träff från Livsmedelsverkets databas. Om träffen
+                inte stämmer kan du ange kolhydratvärdet manuellt nedan.
+              </p>
 
               {matches.map(food => (
                 <button
                   key={food.nummer}
+                  className={
+                    component.selectedFood?.nummer === food.nummer
+                      ? "food-option selected"
+                      : "food-option"
+                  }
                   onClick={() =>
                     selectFoodForComponents(
                       component.id,
@@ -573,7 +585,10 @@ export default function App() {
               <label>Meny</label>
               <input
                 value={menuText}
-                onChange={e => setMenuText(e.target.value)}
+                onChange={e => {
+                  setMenuText(e.target.value);
+                  setComponents([]);
+                }}
               />
 
               <label>Totalt kolhydratmål</label>
@@ -619,12 +634,18 @@ export default function App() {
 
                     <p>
                       Välj den databaspost som bäst motsvarar maten som ska
-                      serveras.
+                      serveras. Om träffen inte stämmer kan du ange
+                      kolhydratvärdet manuellt nedan.
                     </p>
 
                     {matches.map(food => (
                       <button
                         key={food.nummer}
+                        className={
+                          component.selectedFood?.nummer === food.nummer
+                            ? "food-option selected"
+                            : "food-option"
+                        }
                         onClick={() =>
                           selectFoodForComponents(
                             component.id,
