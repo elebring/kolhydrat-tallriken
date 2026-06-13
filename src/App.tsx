@@ -49,8 +49,8 @@ function roleText(role: MealRole) {
 }
 
 const emptyCalculator: CalculatorState = {
-  menuText: "yoghurt, flingor, banan",
-  targetCarbs: "25",
+  menuText: "bröd, yoghurt",
+  targetCarbs: "15",
   components: [],
 };
 
@@ -72,11 +72,11 @@ export default function App() {
   );
 
   const [menuText, setMenuText] = useState(
-    lunchDraft?.menuText ?? "köttbullar, kokt potatis, lingonsylt"
+    lunchDraft?.menuText ?? "köttbullar, potatis kokt, lingonsylt"
   );
 
   const [targetCarbs, setTargetCarbs] = useState(
-    String(lunchDraft?.targetCarbs ?? "35")
+    String(lunchDraft?.targetCarbs ?? "15")
   );
 
   const [components, setComponents] = useState<MealComponent[]>(
@@ -89,8 +89,8 @@ export default function App() {
 
   const [preschoolOther, setPreschoolOther] = useState<CalculatorState>(() =>
     loadJson<CalculatorState>(PRESCHOOL_OTHER_KEY, {
-      menuText: "frukt, smörgås",
-      targetCarbs: "20",
+      menuText: "bröd, yoghurt",
+      targetCarbs: "15",
       components: [],
     })
   );
@@ -596,7 +596,7 @@ export default function App() {
                 }}
               />
 
-              <label>Totalt kolhydratmål</label>
+              <label>Kolhydratmål</label>
               <input
                 type="number"
                 value={targetCarbs}
