@@ -57,7 +57,8 @@ const emptyCalculator: CalculatorState = {
 export default function App() {
   const [activeTab, setActiveTab] = useState<TopTab>("parent");
   const [parentSubTab, setParentSubTab] = useState<ParentSubTab>("lunch");
-  const [preschoolSubTab, setPreschoolSubTab] = useState<PreschoolSubTab>("lunch");
+  const [preschoolSubTab, setPreschoolSubTab] =
+    useState<PreschoolSubTab>("lunch");
 
   const [foods, setFoods] = useState<Food[]>([]);
   const [weekMeals, setWeekMeals] = useState<DayMeal[]>(() =>
@@ -69,12 +70,15 @@ export default function App() {
   const [weekday, setWeekday] = useState<Weekday>(
     lunchDraft?.weekday ?? "Måndag"
   );
+
   const [menuText, setMenuText] = useState(
     lunchDraft?.menuText ?? "köttbullar, kokt potatis, lingonsylt"
   );
+
   const [targetCarbs, setTargetCarbs] = useState(
     String(lunchDraft?.targetCarbs ?? "35")
   );
+
   const [components, setComponents] = useState<MealComponent[]>(
     lunchDraft?.components ?? []
   );
@@ -173,7 +177,12 @@ export default function App() {
     setter(current =>
       current.map(component =>
         component.id === componentId
-          ? { ...component, role, plannedGrams: 0, plannedGramsInput: undefined }
+          ? {
+              ...component,
+              role,
+              plannedGrams: 0,
+              plannedGramsInput: undefined,
+            }
           : component
       )
     );
@@ -304,7 +313,7 @@ export default function App() {
     localStorage.removeItem(LUNCH_DRAFT_KEY);
   }
 
-  function Calculator({
+  function renderCalculator({
     title,
     description,
     state,
@@ -331,6 +340,16 @@ export default function App() {
       <section>
         <h2>{title}</h2>
         <p>{description}</p>
+
+        <div className="info-box">
+          <strong>Tips vid känd vikt</strong>
+          <p>
+            Om du vill utgå från faktisk vikt i stället för ett kolhydratmål:
+            skriv <strong>0</strong> som kolhydratmål och ange vikten direkt
+            under <strong>Portionsförslag</strong>. Då räknas kolhydraterna ut
+            från angiven vikt.
+          </p>
+        </div>
 
         <label>Måltidens delar</label>
         <input
@@ -564,7 +583,9 @@ export default function App() {
                 onChange={e => setTargetCarbs(e.target.value)}
               />
 
-              <button onClick={() => setComponents(createComponentsFromText(menuText))}>
+              <button
+                onClick={() => setComponents(createComponentsFromText(menuText))}
+              >
                 Hämta matvaror
               </button>
 
@@ -605,7 +626,11 @@ export default function App() {
                       <button
                         key={food.nummer}
                         onClick={() =>
-                          selectFoodForComponents(component.id, food, setComponents)
+                          selectFoodForComponents(
+                            component.id,
+                            food,
+                            setComponents
+                          )
                         }
                       >
                         {food.namn}
@@ -709,14 +734,14 @@ export default function App() {
             </section>
           )}
 
-          {parentSubTab === "other" && (
-            <Calculator
-              title="Beräkna annan måltid"
-              description="Använd för mellanmål, fruktstund, utflykt eller andra måltider. Beräkningen sparas separat men förs inte över till förskolan."
-              state={parentOther}
-              setState={setParentOther}
-            />
-          )}
+          {parentSubTab === "other" &&
+            renderCalculator({
+              title: "Beräkna annan måltid",
+              description:
+                "Använd för mellanmål, fruktstund, utflykt eller andra måltider. Beräkningen sparas separat men förs inte över till förskolan.",
+              state: parentOther,
+              setState: setParentOther,
+            })}
         </>
       )}
 
@@ -738,14 +763,14 @@ export default function App() {
             </button>
           </div>
 
-          {preschoolSubTab === "other" && (
-            <Calculator
-              title="Beräkna annan måltid"
-              description="Använd vid exempelvis extra mellanmål eller påfyllning som inte hör till lunchförslaget. Beräkningen sparas separat på denna enhet."
-              state={preschoolOther}
-              setState={setPreschoolOther}
-            />
-          )}
+          {preschoolSubTab === "other" &&
+            renderCalculator({
+              title: "Beräkna annan måltid",
+              description:
+                "Använd vid extra mellanmål eller annan mat som inte hör till lunchförslaget. Beräkningen sparas separat på denna enhet.",
+              state: preschoolOther,
+              setState: setPreschoolOther,
+            })}
 
           {preschoolSubTab === "lunch" && (
             <section>
@@ -820,7 +845,10 @@ export default function App() {
                         component.manualCarbsPer100g ?? component.carbsPer100g;
 
                       const refillGrams = Number(refills[component.id] ?? 0);
-                      const refillCarbs = carbsForGrams(refillGrams, carbsPer100g);
+                      const refillCarbs = carbsForGrams(
+                        refillGrams,
+                        carbsPer100g
+                      );
 
                       return (
                         <div className="card" key={component.id}>
@@ -905,7 +933,8 @@ export default function App() {
 
                       {selectedMeal.components.map(component => {
                         const carbsPer100g =
-                          component.manualCarbsPer100g ?? component.carbsPer100g;
+                          component.manualCarbsPer100g ??
+                          component.carbsPer100g;
 
                         const leftover = Number(leftovers[component.id] ?? 0);
                         const eaten = eatenCarbs(
