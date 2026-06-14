@@ -26,6 +26,10 @@ type CalculatorState = {
   menuText: string;
   targetCarbs: string;
   components: MealComponent[];
+  extraWeightNoCarbs: string;
+  refills: Record<string, string>;
+  leftovers: Record<string, string>;
+  totalLeftover: string;
 };
 
 function makeId() {
@@ -52,6 +56,10 @@ const emptyCalculator: CalculatorState = {
   menuText: "bröd, yoghurt",
   targetCarbs: "15",
   components: [],
+  extraWeightNoCarbs: "",
+  refills: {},
+  leftovers: {},
+  totalLeftover: "",
 };
 
 export default function App() {
@@ -92,6 +100,10 @@ export default function App() {
       menuText: "bröd, yoghurt",
       targetCarbs: "15",
       components: [],
+      extraWeightNoCarbs: "",
+      refills: {},
+      leftovers: {},
+      totalLeftover: "",
     })
   );
 
@@ -328,6 +340,27 @@ export default function App() {
     setState: React.Dispatch<React.SetStateAction<CalculatorState>>;
   }) {
     const plate = getDisplayedPlate(state.components, state.targetCarbs);
+    const extraWeightNoCarbs = Number(state.extraWeightNoCarbs || 0);
+    const componentWeight = plate.reduce(
+      (sum: number, component: MealComponent) => sum + component.plannedGrams,
+      0
+    );
+    const totalWeightWithExtra = componentWeight + extraWeightNoCarbs;
+    const totalCarbs = totalCarbsForComponents(plate);
+
+    const totalLeftoverCarbs =
+      totalWeightWithExtra > 0 && state.totalLeftover !== ""
+        ? Math.round(
+            (Number(state.totalLeftover) / totalWeightWithExtra) *
+              totalCarbs *
+              10
+          ) / 10
+        : 0;
+
+    const eatenByTotalWeight = Math.max(
+      Math.round((totalCarbs - totalLeftoverCarbs) * 10) / 10,
+      0
+    );
 
     const setCalculatorComponents: React.Dispatch<
       React.SetStateAction<MealComponent[]>
@@ -338,6 +371,26 @@ export default function App() {
           typeof update === "function" ? update(current.components) : update,
       }));
     };
+
+    function updateRefill(componentId: string, value: string) {
+      setState(current => ({
+        ...current,
+        refills: {
+          ...current.refills,
+          [componentId]: value,
+        },
+      }));
+    }
+
+    function updateLeftover(componentId: string, value: string) {
+      setState(current => ({
+        ...current,
+        leftovers: {
+          ...current.leftovers,
+          [componentId]: value,
+        },
+      }));
+    }
 
     return (
       <section>
@@ -374,23 +427,33 @@ export default function App() {
           }
         />
 
-       <button
-  type="button"
-  onClick={() =>
-    setState(current => ({
-      ...current,
-      menuText: "",
-      components: [],
-    }))
-  }
->
-  Rensa måltid
-</button>
+        <button
+          type="button"
+          className="danger"
+          onClick={() =>
+            setState(current => ({
+              ...current,
+              menuText: "",
+              targetCarbs: "",
+              components: [],
+              extraWeightNoCarbs: "",
+              refills: {},
+              leftovers: {},
+              totalLeftover: "",
+            }))
+          }
+        >
+          Rensa måltid
+        </button>
+
         <button
           onClick={() =>
             setState(current => ({
               ...current,
               components: createComponentsFromText(current.menuText),
+              refills: {},
+              leftovers: {},
+              totalLeftover: "",
             }))
           }
         >
@@ -495,7 +558,7 @@ export default function App() {
                     {roleText(component.role)}
                   </span>
 
-                 <strong className="food-name">{component.query}</strong> 
+                  <strong className="food-name">{component.query}</strong>
 
                   <label>Mängd, gram</label>
                   <input
@@ -516,7 +579,7 @@ export default function App() {
                   <p>
                     {carbsPer100g} g kolhydrater / 100 g
                     <br />
-                    Ger:{" "}
+                    Ger: {" "}
                     <strong>
                       {carbsForGrams(component.plannedGrams, carbsPer100g)} g
                       kolhydrater
@@ -526,13 +589,207 @@ export default function App() {
               );
             })}
 
+            <div className="info-box">
+              <p>
+                <strong>Extra vikt utan kolhydrater.</strong> Använd detta om
+                måltiden innehåller något som ökar vikten men inte
+                kolhydraterna, till exempel smör, margarin, dressing,
+                majonnäs eller vatten. Värdet tas med när total vikt kvar på
+                tallriken används i restberäkningen.
+              </p>
+            </div>
+
+            <label>Extra vikt utan kolhydrater, gram</label>
+            <input
+              type="number"
+              value={state.extraWeightNoCarbs}
+              onChange={e =>
+                setState(current => ({
+                  ...current,
+                  extraWeightNoCarbs: e.target.value,
+                }))
+              }
+            />
+
             <div className="summary-card">
               <strong>Sammanfattning</strong>
               <p>
-                Totalt:{" "}
-                <strong>{totalCarbsForComponents(plate)} g kolhydrater</strong>
+                Komponentvikt: <strong>{componentWeight} g</strong>
+                <br />
+                Extra vikt utan kolhydrater:{" "}
+                <strong>{extraWeightNoCarbs} g</strong>
+                <br />
+                Total vikt: <strong>{totalWeightWithExtra} g</strong>
+                <br />
+                Kolhydrater: <strong>{totalCarbs} g</strong>
               </p>
             </div>
+
+            <section>
+              <h2>Påfyllning</h2>
+              <p>
+                Ange extra mängd per komponent om barnet får mer mat utöver
+                portionsförslaget.
+              </p>
+
+              {plate.map(component => {
+                const carbsPer100g =
+                  component.manualCarbsPer100g ?? component.carbsPer100g;
+
+                const refillGrams = Number(state.refills[component.id] ?? 0);
+                const refillCarbs = carbsForGrams(refillGrams, carbsPer100g);
+
+                return (
+                  <div className="card" key={component.id}>
+                    <span className={`role-label role-${component.role}`}>
+                      {roleText(component.role)}
+                    </span>
+
+                    <strong className="food-name">{component.query}</strong>
+
+                    <label>Påfyllning, gram</label>
+                    <input
+                      type="number"
+                      value={state.refills[component.id] ?? ""}
+                      onChange={e => updateRefill(component.id, e.target.value)}
+                    />
+
+                    <p>
+                      Påfyllning: <strong>{refillCarbs} g kolhydrater</strong>
+                    </p>
+                  </div>
+                );
+              })}
+
+              <div className="summary-card">
+                <strong>Totalt påfyllning</strong>
+                <p>
+                  {plate
+                    .reduce((sum: number, component: MealComponent) => {
+                      const carbsPer100g =
+                        component.manualCarbsPer100g ?? component.carbsPer100g;
+
+                      return (
+                        sum +
+                        carbsForGrams(
+                          Number(state.refills[component.id] ?? 0),
+                          carbsPer100g
+                        )
+                      );
+                    }, 0)
+                    .toFixed(1)}{" "}
+                  g kolhydrater
+                </p>
+              </div>
+            </section>
+
+            <section>
+              <h2>Beräkning av rester</h2>
+              <p>
+                Välj antingen total vikt kvar eller väg kvarvarande mängd per
+                komponent.
+              </p>
+
+              <div className="card option-card">
+                <h3>Alternativ 1: total vikt kvar</h3>
+
+                <label>Total vikt kvar på tallriken, gram</label>
+                <input
+                  type="number"
+                  value={state.totalLeftover}
+                  onChange={e =>
+                    setState(current => ({
+                      ...current,
+                      totalLeftover: e.target.value,
+                    }))
+                  }
+                />
+
+                <p>
+                  Uppskattat ätit:{" "}
+                  <strong>{eatenByTotalWeight} g kolhydrater</strong>
+                </p>
+
+                <small>
+                  Denna beräkning använder totalvikten inklusive eventuell extra
+                  vikt utan kolhydrater och antar att resterna har ungefär samma
+                  blandning som portionen.
+                </small>
+              </div>
+
+              <div className="card option-card">
+                <h3>Alternativ 2: vikt kvar per komponent</h3>
+
+                {plate.map(component => {
+                  const carbsPer100g =
+                    component.manualCarbsPer100g ?? component.carbsPer100g;
+
+                  const leftover = Number(state.leftovers[component.id] ?? 0);
+                  const eaten = eatenCarbs(
+                    component.plannedGrams,
+                    leftover,
+                    carbsPer100g
+                  );
+
+                  return (
+                    <div className="sub-card" key={component.id}>
+                      <span className={`role-label role-${component.role}`}>
+                        {roleText(component.role)}
+                      </span>
+
+                      <strong className="food-name">{component.query}</strong>
+
+                      <p>
+                        Planerad portion: {component.plannedGrams} g
+                        <br />
+                        Kolhydrater: {carbsPer100g} g / 100 g
+                      </p>
+
+                      <label>Kvar på tallriken, gram</label>
+                      <input
+                        type="number"
+                        value={state.leftovers[component.id] ?? ""}
+                        onChange={e => updateLeftover(component.id, e.target.value)}
+                      />
+
+                      <p>
+                        Uppskattat ätit:{" "}
+                        <strong>{eaten} g kolhydrater</strong>
+                      </p>
+                    </div>
+                  );
+                })}
+
+                <div className="summary-card">
+                  <strong>Sammanfattning</strong>
+                  <p>
+                    Totalt ätit enligt komponenter:{" "}
+                    <strong>
+                      {plate
+                        .reduce((sum: number, component: MealComponent) => {
+                          const carbsPer100g =
+                            component.manualCarbsPer100g ?? component.carbsPer100g;
+
+                          const leftover = Number(
+                            state.leftovers[component.id] ?? 0
+                          );
+
+                          return (
+                            sum +
+                            eatenCarbs(
+                              component.plannedGrams,
+                              leftover,
+                              carbsPer100g
+                            )
+                          );
+                        }, 0)
+                        .toFixed(1)}{" "}
+                      g kolhydrater
+                    </strong>
+                  </p>
+                </div>
+              </div>
+            </section>
           </>
         )}
       </section>
@@ -616,14 +873,16 @@ export default function App() {
               />
 
               <button
-  type="button"
-  onClick={() => {
-    setMenuText("");
-    setComponents([]);
-  }}
->
-  Rensa måltid
-</button>
+                type="button"
+                className="danger"
+                onClick={() => {
+                  setMenuText("");
+                  setTargetCarbs("");
+                  setComponents([]);
+                }}
+              >
+                Rensa måltid
+              </button>
               <button
                 onClick={() => setComponents(createComponentsFromText(menuText))}
               >

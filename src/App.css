@@ -229,7 +229,7 @@ section section {
 }
 
 .info-box p {
-  margin: 0;
+  margin-bottom: 0;
 }
 
 .role-label {
@@ -285,14 +285,16 @@ section section {
   background: #fbd8d4;
 }
 
-small {
-  line-height: 1.5;
-  color: var(--muted);
-}
 .food-name {
   display: block;
   margin-top: 10px;
 }
+
+small {
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 @media (max-width: 600px) {
   main {
     padding: 14px;
