@@ -339,8 +339,14 @@ export default function App() {
     state: CalculatorState;
     setState: React.Dispatch<React.SetStateAction<CalculatorState>>;
   }) {
-    const plate = getDisplayedPlate(state.components, state.targetCarbs);
-    const extraWeightNoCarbs = Number(state.extraWeightNoCarbs || 0);
+    const safeComponents = state.components ?? [];
+const safeRefills = state.refills ?? {};
+const safeLeftovers = state.leftovers ?? {};
+const safeTotalLeftover = state.totalLeftover ?? "";
+const safeExtraWeightNoCarbs = state.extraWeightNoCarbs ?? "";
+
+const plate = getDisplayedPlate(safeComponents, state.targetCarbs ?? "15");
+const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
     const componentWeight = plate.reduce(
       (sum: number, component: MealComponent) => sum + component.plannedGrams,
       0
@@ -349,9 +355,9 @@ export default function App() {
     const totalCarbs = totalCarbsForComponents(plate);
 
     const totalLeftoverCarbs =
-      totalWeightWithExtra > 0 && state.totalLeftover !== ""
+      totalWeightWithExtra > 0 && safeTotalLeftover !== ""
         ? Math.round(
-            (Number(state.totalLeftover) / totalWeightWithExtra) *
+            (Number(safeTotalLeftover) / totalWeightWithExtra) *
               totalCarbs *
               10
           ) / 10
@@ -376,7 +382,7 @@ export default function App() {
       setState(current => ({
         ...current,
         refills: {
-          ...current.refills,
+          ...(current.refills ?? {}),
           [componentId]: value,
         },
       }));
@@ -386,7 +392,7 @@ export default function App() {
       setState(current => ({
         ...current,
         leftovers: {
-          ...current.leftovers,
+          ...(current.leftovers ?? {}),
           [componentId]: value,
         },
       }));
@@ -460,7 +466,7 @@ export default function App() {
           Hämta matvaror
         </button>
 
-        {state.components.map(component => {
+        {safeComponents.map(component => {
           const matches = searchFoods(component.query, foods);
 
           return (
@@ -540,7 +546,7 @@ export default function App() {
           );
         })}
 
-        {state.components.length > 0 && (
+        {safeComponents.length > 0 && (
           <>
             <h2>Portionsförslag</h2>
             <p>
@@ -636,7 +642,7 @@ export default function App() {
                 const carbsPer100g =
                   component.manualCarbsPer100g ?? component.carbsPer100g;
 
-                const refillGrams = Number(state.refills[component.id] ?? 0);
+                const refillGrams = Number(safeRefills[component.id] ?? 0);
                 const refillCarbs = carbsForGrams(refillGrams, carbsPer100g);
 
                 return (
@@ -650,7 +656,7 @@ export default function App() {
                     <label>Påfyllning, gram</label>
                     <input
                       type="number"
-                      value={state.refills[component.id] ?? ""}
+                      value={safeRefills[component.id] ?? ""}
                       onChange={e => updateRefill(component.id, e.target.value)}
                     />
 
@@ -672,7 +678,7 @@ export default function App() {
                       return (
                         sum +
                         carbsForGrams(
-                          Number(state.refills[component.id] ?? 0),
+                          Number(safeRefills[component.id] ?? 0),
                           carbsPer100g
                         )
                       );
@@ -696,7 +702,7 @@ export default function App() {
                 <label>Total vikt kvar på tallriken, gram</label>
                 <input
                   type="number"
-                  value={state.totalLeftover}
+                  value={safeTotalLeftover}
                   onChange={e =>
                     setState(current => ({
                       ...current,
@@ -724,7 +730,7 @@ export default function App() {
                   const carbsPer100g =
                     component.manualCarbsPer100g ?? component.carbsPer100g;
 
-                  const leftover = Number(state.leftovers[component.id] ?? 0);
+                  const leftover = Number(safeLeftovers[component.id] ?? 0);
                   const eaten = eatenCarbs(
                     component.plannedGrams,
                     leftover,
@@ -748,7 +754,7 @@ export default function App() {
                       <label>Kvar på tallriken, gram</label>
                       <input
                         type="number"
-                        value={state.leftovers[component.id] ?? ""}
+                        value={safeLeftovers[component.id] ?? ""}
                         onChange={e => updateLeftover(component.id, e.target.value)}
                       />
 
@@ -771,7 +777,7 @@ export default function App() {
                             component.manualCarbsPer100g ?? component.carbsPer100g;
 
                           const leftover = Number(
-                            state.leftovers[component.id] ?? 0
+                            safeLeftovers[component.id] ?? 0
                           );
 
                           return (
