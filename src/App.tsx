@@ -374,6 +374,18 @@ export default function App() {
           }
         />
 
+       <button
+  type="button"
+  onClick={() =>
+    setState(current => ({
+      ...current,
+      menuText: "",
+      components: [],
+    }))
+  }
+>
+  Rensa måltid
+</button>
         <button
           onClick={() =>
             setState(current => ({
@@ -483,7 +495,7 @@ export default function App() {
                     {roleText(component.role)}
                   </span>
 
-                  <strong>{component.query}</strong>
+                 <strong className="food-name">{component.query}</strong> 
 
                   <label>Mängd, gram</label>
                   <input
@@ -604,6 +616,15 @@ export default function App() {
               />
 
               <button
+  type="button"
+  onClick={() => {
+    setMenuText("");
+    setComponents([]);
+  }}
+>
+  Rensa måltid
+</button>
+              <button
                 onClick={() => setComponents(createComponentsFromText(menuText))}
               >
                 Hämta matvaror
@@ -692,7 +713,7 @@ export default function App() {
 
               {components.length > 0 && (
                 <>
-                  <h2>Tallriksförslag</h2>
+                  <h2>Portionsförslag</h2>
                   <p>
                     Justera gram manuellt om portionen behöver anpassas. Det
                     sparade förslaget förs över till förskolan.
@@ -708,7 +729,7 @@ export default function App() {
                           {roleText(component.role)}
                         </span>
 
-                        <strong>{component.query}</strong>
+                        <strong className="food-name">{component.query}</strong>
 
                         <label>Mängd, gram</label>
                         <input
@@ -742,7 +763,7 @@ export default function App() {
                   <div className="summary-card">
                     <strong>Sammanfattning</strong>
                     <p>
-                      Totalt i tallriksförslag:{" "}
+                      Totalt i portionsförslag:{" "}
                       <strong>
                         {totalCarbsForComponents(displayedLunchPlate)} g
                         kolhydrater
@@ -841,12 +862,9 @@ export default function App() {
                             {roleText(component.role)}
                           </span>
 
-                          <strong>{component.query}</strong>
+                          <strong className="food-name">{component.query}</strong>
                           <p>
                             {component.plannedGrams} g
-                            <br />
-                            {carbsForGrams(component.plannedGrams, carbsPer100g)}{" "}
-                            g kolhydrater
                           </p>
                         </div>
                       );
@@ -884,7 +902,7 @@ export default function App() {
                             {roleText(component.role)}
                           </span>
 
-                          <strong>{component.query}</strong>
+                          <strong className="food-name">{component.query}</strong>
 
                           <label>Påfyllning, gram</label>
                           <input
@@ -977,7 +995,7 @@ export default function App() {
                               {roleText(component.role)}
                             </span>
 
-                            <strong>{component.query}</strong>
+                           <strong className="food-name">{component.query}</strong> 
 
                             <p>
                               Planerad portion: {component.plannedGrams} g
