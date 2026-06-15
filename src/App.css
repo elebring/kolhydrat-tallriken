@@ -335,3 +335,9 @@ small {
   color: var(--muted);
   font-size: 0.95rem;
 }
+.meal-section {
+  margin-top: 22px;
+  background: var(--primary-lighter);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
