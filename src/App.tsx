@@ -557,6 +557,7 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
         })}
 
         {safeComponents.length > 0 && (
+          <>
           <section className="meal-section">
             <h2>Portionsförslag</h2>
             <p>
@@ -640,6 +641,7 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
                 Kolhydrater: <strong>{totalCarbs} g</strong>
               </p>
             </div>
+            </section>
 
             <section>
               <h2>Påfyllning</h2>
@@ -773,7 +775,7 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
 
               </div>
             </section>
-          </section>
+          </>
         )}
       </section>
     );
