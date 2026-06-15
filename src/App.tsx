@@ -734,34 +734,33 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
   </div>
 ))}
 
-                <div className="summary-card">
-                  <strong>Sammanfattning</strong>
-                  <p>
-                    Totalt ätit enligt komponenter:{" "}
-                    <strong>
-                      {plate
-                        .reduce((sum: number, component: MealComponent) => {
-                          const carbsPer100g =
-                            component.manualCarbsPer100g ?? component.carbsPer100g;
+<p className="option-result">
+  Uppskattat ätit:{" "}
+  <strong>
+    {plate
+      .reduce((sum, component) => {
+        const carbsPer100g =
+          component.manualCarbsPer100g ??
+          component.carbsPer100g;
 
-                          const leftover = Number(
-                            safeLeftovers[component.id] ?? 0
-                          );
+        const leftover = Number(
+          safeLeftovers[component.id] ?? 0
+        );
 
-                          return (
-                            sum +
-                            eatenCarbs(
-                              component.plannedGrams,
-                              leftover,
-                              carbsPer100g
-                            )
-                          );
-                        }, 0)
-                        .toFixed(1)}{" "}
-                      g kolhydrater
-                    </strong>
-                  </p>
-                </div>
+        return (
+          sum +
+          eatenCarbs(
+            component.plannedGrams,
+            leftover,
+            carbsPer100g
+          )
+        );
+      }, 0)
+      .toFixed(1)}{" "}
+    g kolhydrater
+  </strong>
+</p>
+
               </div>
             </section>
           </>
@@ -1218,38 +1217,33 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
   </div>
 ))}
 
-                      <div className="summary-card">
-                        <strong>Sammanfattning</strong>
-                        <p>
-                          Totalt ätit enligt komponenter:{" "}
-                          <strong>
-                            {selectedMeal.components
-                              .reduce(
-                                (sum: number, component: MealComponent) => {
-                                  const carbsPer100g =
-                                    component.manualCarbsPer100g ??
-                                    component.carbsPer100g;
+<p className="option-result">
+  Uppskattat ätit:{" "}
+  <strong>
+    {selectedMeal.components
+      .reduce((sum, component) => {
+        const carbsPer100g =
+          component.manualCarbsPer100g ??
+          component.carbsPer100g;
 
-                                  const leftover = Number(
-                                    leftovers[component.id] ?? 0
-                                  );
+        const leftover = Number(
+          leftovers[component.id] ?? 0
+        );
 
-                                  return (
-                                    sum +
-                                    eatenCarbs(
-                                      component.plannedGrams,
-                                      leftover,
-                                      carbsPer100g
-                                    )
-                                  );
-                                },
-                                0
-                              )
-                              .toFixed(1)}{" "}
-                            g kolhydrater
-                          </strong>
-                        </p>
-                      </div>
+        return (
+          sum +
+          eatenCarbs(
+            component.plannedGrams,
+            leftover,
+            carbsPer100g
+          )
+        );
+      }, 0)
+      .toFixed(1)}{" "}
+    g kolhydrater
+  </strong>
+</p>
+
                     </div>
                   </section>
                 </>

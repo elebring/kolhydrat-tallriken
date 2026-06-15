@@ -317,3 +317,12 @@ small {
   font-weight: 600;
   margin-bottom: 0.4rem;
 }
+.option-result {
+  margin-top: 2rem;
+  font-size: 2rem;
+  color: #64748b;
+}
+
+.option-result strong {
+  color: #0f172a;
+}
