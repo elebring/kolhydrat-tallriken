@@ -719,14 +719,17 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
                 <h3>Alternativ 2: vikt kvar per komponent</h3>
 
                 {plate.map(component => (
-  <div className="sub-card" key={component.id}>
-    <strong className="food-name">{component.query}</strong>
+  <div key={component.id} className="leftover-row">
+    <label>
+      {component.query}: kvar på tallriken, gram
+    </label>
 
-    <label>Kvar på tallriken, gram</label>
     <input
       type="number"
-      value={state.leftovers[component.id] ?? ""}
-      onChange={e => updateLeftover(component.id, e.target.value)}
+      value={safeLeftovers[component.id] ?? ""}
+      onChange={e =>
+        updateLeftover(component.id, e.target.value)
+      }
     />
   </div>
 ))}
@@ -1200,10 +1203,8 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
                       <h3>Alternativ 2: vikt kvar per komponent</h3>
 
                      {selectedMeal.components.map(component => (
-  <div className="sub-card" key={component.id}>
-    <strong className="food-name">{component.query}</strong>
-
-    <label>Kvar på tallriken, gram</label>
+  <div key={component.id}>
+    <label>{component.query}: kvar på tallriken, gram</label>
     <input
       type="number"
       value={leftovers[component.id] ?? ""}
@@ -1215,7 +1216,7 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
       }
     />
   </div>
-))} 
+))}
 
                       <div className="summary-card">
                         <strong>Sammanfattning</strong>

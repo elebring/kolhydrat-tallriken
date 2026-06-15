@@ -308,3 +308,12 @@ small {
     padding: 15px;
   }
 }
+.leftover-row {
+  margin-bottom: 1rem;
+}
+
+.leftover-row label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
