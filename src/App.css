@@ -318,11 +318,15 @@ small {
   margin-bottom: 0.4rem;
 }
 .option-result {
-  margin-top: 2rem;
-  font-size: 2rem;
-  color: #64748b;
+  margin-top: 24px;
+  line-height: 1.6;
+  color: var(--muted);
 }
 
 .option-result strong {
-  color: #0f172a;
+  color: var(--text);
+  font-weight: 700;
+}
+.option-result {
+  margin-bottom: 0;
 }
