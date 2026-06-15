@@ -598,7 +598,7 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
                     <br />
                     Ger: {" "}
                     <strong>
-                      {carbsForGrams(component.plannedGrams, carbsPer100g)} g
+                      {carbsForGrams(component.plannedGrams, carbsPer100g).toFixed(1)} g
                       kolhydrater
                     </strong>
                   </p>
@@ -717,7 +717,7 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
 
                 <p>
                   Uppskattat ätit:{" "}
-                  <strong>{eatenByTotalWeight} g kolhydrater</strong>
+                  <strong>{eatenByTotalWeight.toFixed(1)} g kolhydrater</strong>
                 </p>
 
                 <small>
