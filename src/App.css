@@ -330,3 +330,8 @@ small {
 .option-result {
   margin-bottom: 0;
 }
+.label-help {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.95rem;
+}

@@ -412,7 +412,12 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
           </p>
         </div>
 
-        <label>Måltidens delar</label>
+        <label>
+  Måltidens delar{" "}
+  <span className="label-help">
+    (separera delar med komma)
+  </span>
+</label>
         <input
           value={state.menuText}
           onChange={e =>
@@ -424,7 +429,12 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
           }
         />
 
-        <label>Kolhydratmål</label>
+        <label>
+  Kolhydratmål{" "}
+  <span className="label-help">
+    (ange i gram)
+  </span>
+</label>
         <input
           type="number"
           value={state.targetCarbs}
@@ -829,7 +839,12 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
                 ))}
               </select>
 
-              <label>Meny</label>
+              <label>
+  Måltidens delar{" "}
+  <span className="label-help">
+    (separera delar med komma)
+  </span>
+</label>
               <input
                 value={menuText}
                 onChange={e => {
@@ -838,7 +853,12 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
                 }}
               />
 
-              <label>Kolhydratmål</label>
+              <label>
+  Kolhydratmål{" "}
+  <span className="label-help">
+    (ange i gram)
+  </span>
+</label>
               <input
                 type="number"
                 value={targetCarbs}
