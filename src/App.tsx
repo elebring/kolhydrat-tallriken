@@ -639,11 +639,6 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
               </p>
 
               {plate.map(component => {
-                const carbsPer100g =
-                  component.manualCarbsPer100g ?? component.carbsPer100g;
-
-                const refillGrams = Number(safeRefills[component.id] ?? 0);
-                const refillCarbs = carbsForGrams(refillGrams, carbsPer100g);
 
                 return (
                   <div className="card" key={component.id}>
@@ -660,9 +655,6 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
                       onChange={e => updateRefill(component.id, e.target.value)}
                     />
 
-                    <p>
-                      Påfyllning: <strong>{refillCarbs} g kolhydrater</strong>
-                    </p>
                   </div>
                 );
               })}
@@ -726,45 +718,18 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
               <div className="card option-card">
                 <h3>Alternativ 2: vikt kvar per komponent</h3>
 
-                {plate.map(component => {
-                  const carbsPer100g =
-                    component.manualCarbsPer100g ?? component.carbsPer100g;
+                {plate.map(component => (
+  <div className="sub-card" key={component.id}>
+    <strong className="food-name">{component.query}</strong>
 
-                  const leftover = Number(safeLeftovers[component.id] ?? 0);
-                  const eaten = eatenCarbs(
-                    component.plannedGrams,
-                    leftover,
-                    carbsPer100g
-                  );
-
-                  return (
-                    <div className="sub-card" key={component.id}>
-                      <span className={`role-label role-${component.role}`}>
-                        {roleText(component.role)}
-                      </span>
-
-                      <strong className="food-name">{component.query}</strong>
-
-                      <p>
-                        Planerad portion: {component.plannedGrams} g
-                        <br />
-                        Kolhydrater: {carbsPer100g} g / 100 g
-                      </p>
-
-                      <label>Kvar på tallriken, gram</label>
-                      <input
-                        type="number"
-                        value={safeLeftovers[component.id] ?? ""}
-                        onChange={e => updateLeftover(component.id, e.target.value)}
-                      />
-
-                      <p>
-                        Uppskattat ätit:{" "}
-                        <strong>{eaten} g kolhydrater</strong>
-                      </p>
-                    </div>
-                  );
-                })}
+    <label>Kvar på tallriken, gram</label>
+    <input
+      type="number"
+      value={state.leftovers[component.id] ?? ""}
+      onChange={e => updateLeftover(component.id, e.target.value)}
+    />
+  </div>
+))}
 
                 <div className="summary-card">
                   <strong>Sammanfattning</strong>
@@ -1155,11 +1120,6 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
                       const carbsPer100g =
                         component.manualCarbsPer100g ?? component.carbsPer100g;
 
-                      const refillGrams = Number(refills[component.id] ?? 0);
-                      const refillCarbs = carbsForGrams(
-                        refillGrams,
-                        carbsPer100g
-                      );
 
                       return (
                         <div className="card" key={component.id}>
@@ -1181,9 +1141,6 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
                             }
                           />
 
-                          <p>
-                            Påfyllning: <strong>{refillCarbs} g kolhydrater</strong>
-                          </p>
                         </div>
                       );
                     })}
@@ -1242,51 +1199,23 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
                     <div className="card option-card">
                       <h3>Alternativ 2: vikt kvar per komponent</h3>
 
-                      {selectedMeal.components.map(component => {
-                        const carbsPer100g =
-                          component.manualCarbsPer100g ??
-                          component.carbsPer100g;
+                     {selectedMeal.components.map(component => (
+  <div className="sub-card" key={component.id}>
+    <strong className="food-name">{component.query}</strong>
 
-                        const leftover = Number(leftovers[component.id] ?? 0);
-                        const eaten = eatenCarbs(
-                          component.plannedGrams,
-                          leftover,
-                          carbsPer100g
-                        );
-
-                        return (
-                          <div className="sub-card" key={component.id}>
-                            <span className={`role-label role-${component.role}`}>
-                              {roleText(component.role)}
-                            </span>
-
-                           <strong className="food-name">{component.query}</strong> 
-
-                            <p>
-                              Planerad portion: {component.plannedGrams} g
-                              <br />
-                              Kolhydrater: {carbsPer100g} g / 100 g
-                            </p>
-
-                            <label>Kvar på tallriken, gram</label>
-                            <input
-                              type="number"
-                              value={leftovers[component.id] ?? ""}
-                              onChange={e =>
-                                setLeftovers(current => ({
-                                  ...current,
-                                  [component.id]: e.target.value,
-                                }))
-                              }
-                            />
-
-                            <p>
-                              Uppskattat ätit:{" "}
-                              <strong>{eaten} g kolhydrater</strong>
-                            </p>
-                          </div>
-                        );
-                      })}
+    <label>Kvar på tallriken, gram</label>
+    <input
+      type="number"
+      value={leftovers[component.id] ?? ""}
+      onChange={e =>
+        setLeftovers(current => ({
+          ...current,
+          [component.id]: e.target.value,
+        }))
+      }
+    />
+  </div>
+))} 
 
                       <div className="summary-card">
                         <strong>Sammanfattning</strong>
