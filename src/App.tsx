@@ -404,12 +404,10 @@ const extraWeightNoCarbs = Number(safeExtraWeightNoCarbs || 0);
         <p>{description}</p>
 
         <div className="info-box">
-          <p>
             Om du vill utgå från faktisk vikt i stället för ett kolhydratmål:
             skriv <strong>0</strong> som kolhydratmål och ange vikten direkt
             under <strong>Portionsförslag</strong>. Då räknas kolhydraterna ut
             från angiven vikt.
-          </p>
         </div>
 
         <label>
