@@ -17,18 +17,8 @@ function asArray<T>(data: unknown, keys: string[]): T[] {
   return [];
 }
 
-async function fetchJson(
-  path: string,
-  params: Record<string, string | number> = {}
-) {
-  const searchParams = new URLSearchParams();
-  searchParams.set("path", path);
-
-  Object.entries(params).forEach(([key, value]) => {
-    searchParams.set(key, String(value));
-  });
-
-  const response = await fetch(`${PROXY_URL}?${searchParams.toString()}`, {
+async function fetchJson(url: string) {
+  const response = await fetch(url, {
     headers: {
       Accept: "application/json",
     },
@@ -49,11 +39,9 @@ export async function fetchFoods(
   offset = 0,
   limit = 100
 ): Promise<Food[]> {
-  const data = await fetchJson("livsmedel", {
-    offset,
-    limit,
-    sprak: 1,
-  });
+  const data = await fetchJson(
+    `${PROXY_URL}/livsmedel?offset=${offset}&limit=${limit}&sprak=1`
+  );
 
   return asArray<Food>(data, [
     "livsmedel",
@@ -85,9 +73,9 @@ export async function fetchAllFoods(): Promise<Food[]> {
 export async function fetchNutrition(
   foodNumber: number
 ): Promise<NutritionValue[]> {
-  const data = await fetchJson(`livsmedel/${foodNumber}/naringsvarden`, {
-    sprak: 1,
-  });
+  const data = await fetchJson(
+    `${PROXY_URL}/livsmedel/${foodNumber}/naringsvarden?sprak=1`
+  );
 
   return asArray<NutritionValue>(data, [
     "naringsvarden",

@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/slv/:path*",
+      "destination": "https://dataportal.livsmedelsverket.se/livsmedel/api/v1/:path*"
+    }
+  ]
+}
