@@ -1,18 +1,53 @@
 import type { Food, NutritionValue } from "../types";
 
-const BASE_URL = "https://dataportal.livsmedelsverket.se/livsmedel/api/v1";
+const BASE_URL =
+  "https://dataportal.livsmedelsverket.se/livsmedel/api/v1";
 
-export async function fetchFoods(offset = 0, limit = 100): Promise<Food[]> {
-  const res = await fetch(
+function asArray<T>(data: unknown, keys: string[]): T[] {
+  if (Array.isArray(data)) return data as T[];
+
+  if (data && typeof data === "object") {
+    const objectData = data as Record<string, unknown>;
+
+    for (const key of keys) {
+      const value = objectData[key];
+      if (Array.isArray(value)) return value as T[];
+    }
+  }
+
+  return [];
+}
+
+async function fetchJson(url: string) {
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `API-fel ${response.status}: ${response.statusText}`
+    );
+  }
+
+  return response.json();
+}
+
+export async function fetchFoods(
+  offset = 0,
+  limit = 100
+): Promise<Food[]> {
+  const data = await fetchJson(
     `${BASE_URL}/livsmedel?offset=${offset}&limit=${limit}&sprak=1`
   );
 
-  if (!res.ok) {
-    throw new Error("Kunde inte hämta livsmedel");
-  }
-
-  const data = await res.json();
-  return data.livsmedel ?? data.livsmedelLista ?? data.items ?? data;
+  return asArray<Food>(data, [
+    "livsmedel",
+    "livsmedelLista",
+    "items",
+    "data",
+  ]);
 }
 
 export async function fetchAllFoods(): Promise<Food[]> {
@@ -22,6 +57,7 @@ export async function fetchAllFoods(): Promise<Food[]> {
 
   while (true) {
     const batch = await fetchFoods(offset, limit);
+
     if (!Array.isArray(batch) || batch.length === 0) break;
 
     all = [...all, ...batch];
@@ -36,15 +72,14 @@ export async function fetchAllFoods(): Promise<Food[]> {
 export async function fetchNutrition(
   foodNumber: number
 ): Promise<NutritionValue[]> {
-  const res = await fetch(
+  const data = await fetchJson(
     `${BASE_URL}/livsmedel/${foodNumber}/naringsvarden?sprak=1`
   );
 
-  if (!res.ok) {
-    throw new Error("Kunde inte hämta näringsvärden");
-  }
-
-  const data = await res.json();
-  console.log("SLV livsmedel:", data);
-  return data.naringsvarden ?? data.naringsvardeLista ?? data.items ?? data;
+  return asArray<NutritionValue>(data, [
+    "naringsvarden",
+    "naringsvardeLista",
+    "items",
+    "data",
+  ]);
 }
