@@ -1,12 +1,15 @@
 const BASE_URL =
   "https://dataportal.livsmedelsverket.se/livsmedel/api/v1";
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     const { path, ...params } = req.query;
 
     if (!path || typeof path !== "string") {
-      return res.status(400).json({ error: "Missing path" });
+      return res.status(400).json({
+        error: "Missing path",
+        query: req.query,
+      });
     }
 
     const allowed =
@@ -14,14 +17,17 @@ export default async function handler(req, res) {
       /^livsmedel\/\d+\/naringsvarden$/.test(path);
 
     if (!allowed) {
-      return res.status(400).json({ error: "Invalid path" });
+      return res.status(400).json({
+        error: "Invalid path",
+        path,
+      });
     }
 
     const searchParams = new URLSearchParams();
 
     Object.entries(params).forEach(([key, value]) => {
       if (Array.isArray(value)) {
-        value.forEach(item => searchParams.append(key, item));
+        value.forEach(item => searchParams.append(key, String(item)));
       } else if (value !== undefined) {
         searchParams.append(key, String(value));
       }
@@ -34,6 +40,7 @@ export default async function handler(req, res) {
     const response = await fetch(url, {
       headers: {
         Accept: "application/json",
+        "User-Agent": "SmartPortion/1.0",
       },
     });
 
@@ -48,7 +55,7 @@ export default async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({
       error: "SLV proxy failed",
-      message: error instanceof Error ? error.message : String(error),
+      message: error && error.message ? error.message : String(error),
     });
   }
-}
+};
