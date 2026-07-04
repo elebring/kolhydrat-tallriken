@@ -12,7 +12,7 @@ export async function fetchFoods(offset = 0, limit = 100): Promise<Food[]> {
   }
 
   const data = await res.json();
-  return data.livsmedel ?? data.items ?? data;
+  return data.livsmedel ?? data.livsmedelLista ?? data.items ?? data;
 }
 
 export async function fetchAllFoods(): Promise<Food[]> {
@@ -45,5 +45,6 @@ export async function fetchNutrition(
   }
 
   const data = await res.json();
-  return data.naringsvarden ?? data.items ?? data;
+  console.log("SLV livsmedel:", data);
+  return data.naringsvarden ?? data.naringsvardeLista ?? data.items ?? data;
 }
