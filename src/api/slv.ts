@@ -1,7 +1,6 @@
 import type { Food, NutritionValue } from "../types";
 
-const BASE_URL =
-  "https://dataportal.livsmedelsverket.se/livsmedel/api/v1";
+const PROXY_URL = "/api/slv";
 
 function asArray<T>(data: unknown, keys: string[]): T[] {
   if (Array.isArray(data)) return data as T[];
@@ -18,16 +17,28 @@ function asArray<T>(data: unknown, keys: string[]): T[] {
   return [];
 }
 
-async function fetchJson(url: string) {
-  const response = await fetch(url, {
+async function fetchJson(
+  path: string,
+  params: Record<string, string | number> = {}
+) {
+  const searchParams = new URLSearchParams();
+  searchParams.set("path", path);
+
+  Object.entries(params).forEach(([key, value]) => {
+    searchParams.set(key, String(value));
+  });
+
+  const response = await fetch(`${PROXY_URL}?${searchParams.toString()}`, {
     headers: {
       Accept: "application/json",
     },
   });
 
   if (!response.ok) {
+    const text = await response.text();
+
     throw new Error(
-      `API-fel ${response.status}: ${response.statusText}`
+      `Kunde inte hämta från Livsmedelsverket. Status ${response.status}. ${text}`
     );
   }
 
@@ -38,9 +49,11 @@ export async function fetchFoods(
   offset = 0,
   limit = 100
 ): Promise<Food[]> {
-  const data = await fetchJson(
-    `${BASE_URL}/livsmedel?offset=${offset}&limit=${limit}&sprak=1`
-  );
+  const data = await fetchJson("livsmedel", {
+    offset,
+    limit,
+    sprak: 1,
+  });
 
   return asArray<Food>(data, [
     "livsmedel",
@@ -72,9 +85,9 @@ export async function fetchAllFoods(): Promise<Food[]> {
 export async function fetchNutrition(
   foodNumber: number
 ): Promise<NutritionValue[]> {
-  const data = await fetchJson(
-    `${BASE_URL}/livsmedel/${foodNumber}/naringsvarden?sprak=1`
-  );
+  const data = await fetchJson(`livsmedel/${foodNumber}/naringsvarden`, {
+    sprak: 1,
+  });
 
   return asArray<NutritionValue>(data, [
     "naringsvarden",
